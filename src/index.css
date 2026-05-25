@@ -1,0 +1,92 @@
+/* ─── Fonts ─────────────────────────────────────────────────────────────────── */
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── shadcn CSS Variables ─────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --background: 0 0% 2%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 7%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 7%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 7%;
+    --secondary: 217 33% 10%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 10%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 12%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 12%;
+    --input: 217 33% 12%;
+    --ring: 213 27% 84%;
+    --radius: 0.5rem;
+  }
+}
+
+/* ─── Global Reset ─────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border box-border m-0 p-0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #050505;
+    color: #D8DEE9;
+    font-family: 'Satoshi', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  canvas { display: block; }
+
+  ::selection {
+    background-color: rgba(11, 31, 58, 0.8);
+    color: #ffffff;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #050505; }
+  ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #0B1F3A; }
+}
+
+/* ─── Utility Classes ──────────────────────────────────────────────────────── */
+@layer utilities {
+  .arka-card {
+    @apply bg-[#0D1320] border border-[#1E293B] rounded-lg;
+  }
+
+  .arka-border {
+    @apply border border-[#1E293B];
+  }
+
+  .text-muted-arka {
+    color: #94A3B8;
+  }
+
+  .gradient-midnight {
+    background: linear-gradient(135deg, #050505 0%, #0B1F3A 50%, #050505 100%);
+  }
+
+  .section-padding {
+    @apply px-6 md:px-12 lg:px-24 py-20 lg:py-28;
+  }
+
+  .container-arka {
+    @apply max-w-7xl mx-auto px-6 md:px-12;
+  }
+}

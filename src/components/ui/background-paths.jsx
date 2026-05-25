@@ -1,0 +1,84 @@
+import { motion } from 'framer-motion'
+import { Button } from '@/components/ui/button'
+
+function FloatingPaths({ position }) {
+  const paths = Array.from({ length: 36 }, (_, i) => ({
+    id: i,
+    d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${380 - i * 5 * position} -${189 + i * 6} -${312 - i * 5 * position} ${216 - i * 6} ${152 - i * 5 * position} ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${684 - i * 5 * position} ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
+    width: 0.5 + i * 0.03,
+  }))
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      <svg className="w-full h-full" viewBox="0 0 696 316" fill="none">
+        {paths.map((path) => (
+          <motion.path
+            key={path.id}
+            d={path.d}
+            stroke="#C9A352"
+            strokeWidth={path.width}
+            strokeOpacity={0.05 + path.id * 0.015}
+            initial={{ pathLength: 0.3, opacity: 0.6 }}
+            animate={{ pathLength: 1, opacity: [0.3, 0.6, 0.3], pathOffset: [0, 1, 0] }}
+            transition={{ duration: 20 + Math.random() * 10, repeat: Infinity, ease: 'linear' }}
+          />
+        ))}
+      </svg>
+    </div>
+  )
+}
+
+export function BackgroundPaths({ title = 'Background Paths', onAction, actionLabel = 'Discover Excellence' }) {
+  const words = title.split(' ')
+
+  return (
+    <div className="relative w-full flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0">
+        <FloatingPaths position={1} />
+        <FloatingPaths position={-1} />
+      </div>
+
+      <div className="relative z-10 container mx-auto px-4 md:px-6 text-center py-20">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 2 }}
+          className="max-w-4xl mx-auto"
+        >
+          <h2 className="text-4xl sm:text-6xl md:text-7xl font-light mb-10 tracking-tight">
+            {words.map((word, wi) => (
+              <span key={wi} className="inline-block mr-4 last:mr-0">
+                {word.split('').map((letter, li) => (
+                  <motion.span
+                    key={`${wi}-${li}`}
+                    initial={{ y: 80, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: wi * 0.1 + li * 0.03, type: 'spring', stiffness: 150, damping: 25 }}
+                    className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60"
+                  >
+                    {letter}
+                  </motion.span>
+                ))}
+              </span>
+            ))}
+          </h2>
+
+          {onAction && (
+            <div className="inline-block group relative bg-gradient-to-b from-white/10 to-black/10 p-px rounded-2xl backdrop-blur-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <Button
+                variant="ghost"
+                onClick={onAction}
+                className="rounded-[1.15rem] px-8 py-6 text-lg font-semibold backdrop-blur-md
+                  bg-black/80 hover:bg-black/90 text-white transition-all duration-300
+                  group-hover:-translate-y-0.5 border border-white/10 hover:shadow-md"
+              >
+                <span className="opacity-90 group-hover:opacity-100 transition-opacity">{actionLabel}</span>
+                <span className="ml-3 opacity-70 group-hover:opacity-100 group-hover:translate-x-1.5 transition-all duration-300">→</span>
+              </Button>
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </div>
+  )
+}
