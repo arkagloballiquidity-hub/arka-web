@@ -8,12 +8,13 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const SITE   = process.env.SITE_URL || 'https://arka-web-six.vercel.app'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-let montserratBoldBytes, montserratRegBytes, montserratLightBytes
+let montserratBoldBytes, montserratRegBytes, montserratLightBytes, logoPngBytes
 try {
   montserratBoldBytes  = readFileSync(join(__dirname, 'fonts/Montserrat-Bold.ttf'))
   montserratRegBytes   = readFileSync(join(__dirname, 'fonts/Montserrat-Regular.ttf'))
   montserratLightBytes = readFileSync(join(__dirname, 'fonts/Montserrat-Light.ttf'))
 } catch { /* fall back to Helvetica */ }
+try { logoPngBytes = readFileSync(join(__dirname, 'logo_arka.png')) } catch { /* no logo */ }
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -94,10 +95,19 @@ function buildEmail({ firstName, profile }) {
 <tr><td align="center" style="padding:48px 16px">
 <table width="100%" style="max-width:580px">
 
-  <!-- Header wordmark -->
+  <!-- Header logo -->
   <tr><td style="padding:28px 0 24px;border-bottom:1px solid #1a1a1a;text-align:center">
-    <span style="font-size:18px;letter-spacing:.45em;text-transform:uppercase;color:#C9A352;font-weight:700;vertical-align:middle;font-family:Arial,sans-serif">ARKA</span>
-    <span style="font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:#666;font-weight:400;vertical-align:middle;margin-left:8px;font-family:Arial,sans-serif">GLOBAL INVESTMENTS</span>
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto;display:inline-table">
+      <tr>
+        <td style="vertical-align:middle;padding-right:14px">
+          <img src="${SITE}/logo_arka.png" width="40" height="40" alt="ARKA" style="display:block;border:0" />
+        </td>
+        <td style="vertical-align:middle;text-align:left">
+          <div style="font-size:16px;letter-spacing:4px;font-weight:700;color:#C9A352;font-family:Arial,sans-serif;text-transform:uppercase">ARKA</div>
+          <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:#666;font-family:Arial,sans-serif;margin-top:2px">GLOBAL INVESTMENTS</div>
+        </td>
+      </tr>
+    </table>
   </td></tr>
 
   <!-- Greeting -->
@@ -243,8 +253,23 @@ async function buildPDF({ firstName, profile }) {
   // Header
   page.drawRectangle({ x: 0, y: pageH - 70, width: pageW, height: 70, color: ROW })
   page.drawLine({ start: { x: 0, y: pageH - 70 }, end: { x: pageW, y: pageH - 70 }, thickness: 0.5, color: GOLD })
-  page.drawText('ARKA', { x: M, y: pageH - 46, size: 14, font: bold, color: GOLD, characterSpacing: 4 })
-  page.drawText('GLOBAL INVESTMENTS', { x: M, y: pageH - 60, size: 6.5, font: reg, color: GRAY, characterSpacing: 2.5 })
+  if (logoPngBytes) {
+    try {
+      const img = await pdfDoc.embedPng(logoPngBytes)
+      const logoH = 32, logoW = Math.round(logoH * img.width / img.height)
+      page.drawImage(img, { x: M, y: pageH - 64, width: logoW, height: logoH })
+      page.drawText('ARKA', { x: M + logoW + 10, y: pageH - 46, size: 13, font: bold, color: GOLD, characterSpacing: 3 })
+      page.drawText('GLOBAL INVESTMENTS', { x: M + logoW + 10, y: pageH - 60, size: 6, font: reg, color: GRAY, characterSpacing: 2 })
+    } catch {
+      page.drawRectangle({ x: M, y: pageH - 62, width: 64, height: 28, color: GOLD })
+      page.drawText('ARKA', { x: M + 7, y: pageH - 52, size: 13, font: bold, color: WHITE, characterSpacing: 3 })
+      page.drawText('GLOBAL INVESTMENTS', { x: M + 74, y: pageH - 48, size: 6, font: reg, color: GRAY, characterSpacing: 2 })
+    }
+  } else {
+    page.drawRectangle({ x: M, y: pageH - 62, width: 64, height: 28, color: GOLD })
+    page.drawText('ARKA', { x: M + 7, y: pageH - 52, size: 13, font: bold, color: WHITE, characterSpacing: 3 })
+    page.drawText('GLOBAL INVESTMENTS', { x: M + 74, y: pageH - 48, size: 6, font: reg, color: GRAY, characterSpacing: 2 })
+  }
   const docTitle = 'INVESTOR RISK PROFILE'
   const dtW = reg.widthOfTextAtSize(docTitle, 7.5)
   page.drawText(docTitle, { x: pageW - M - dtW, y: pageH - 45, size: 7.5, font: reg, color: GRAY, characterSpacing: 1.5 })

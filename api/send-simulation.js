@@ -8,12 +8,13 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const SITE   = process.env.SITE_URL || 'https://arka-web-six.vercel.app'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-let montserratBoldBytes, montserratRegBytes, montserratLightBytes
+let montserratBoldBytes, montserratRegBytes, montserratLightBytes, logoPngBytes
 try {
   montserratBoldBytes  = readFileSync(join(__dirname, 'fonts/Montserrat-Bold.ttf'))
   montserratRegBytes   = readFileSync(join(__dirname, 'fonts/Montserrat-Regular.ttf'))
   montserratLightBytes = readFileSync(join(__dirname, 'fonts/Montserrat-Light.ttf'))
 } catch { /* fall back to Helvetica */ }
+try { logoPngBytes = readFileSync(join(__dirname, 'logo_arka.png')) } catch { /* no logo */ }
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -150,10 +151,19 @@ function buildEmail({ firstName, params, results, rows }) {
 <tr><td align="center" style="padding:48px 16px">
 <table width="100%" style="max-width:580px">
 
-  <!-- Header wordmark -->
+  <!-- Header logo -->
   <tr><td style="padding:28px 0 24px;border-bottom:1px solid #1a1a1a;text-align:center">
-    <span style="font-size:18px;letter-spacing:.45em;text-transform:uppercase;color:#C9A352;font-weight:700;vertical-align:middle;font-family:Arial,sans-serif">ARKA</span>
-    <span style="font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:#666;font-weight:400;vertical-align:middle;margin-left:8px;font-family:Arial,sans-serif">GLOBAL INVESTMENTS</span>
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto;display:inline-table">
+      <tr>
+        <td style="vertical-align:middle;padding-right:14px">
+          <img src="${SITE}/logo_arka.png" width="40" height="40" alt="ARKA" style="display:block;border:0" />
+        </td>
+        <td style="vertical-align:middle;text-align:left">
+          <div style="font-size:16px;letter-spacing:4px;font-weight:700;color:#C9A352;font-family:Arial,sans-serif;text-transform:uppercase">ARKA</div>
+          <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:#666;font-family:Arial,sans-serif;margin-top:2px">GLOBAL INVESTMENTS</div>
+        </td>
+      </tr>
+    </table>
   </td></tr>
 
   <!-- Greeting -->
@@ -309,9 +319,21 @@ async function loadFonts(pdfDoc) {
   return { bold, reg, light }
 }
 
-function drawWordmark(page, fonts, x, y, GOLD, GRAY) {
-  page.drawText('ARKA', { x, y: y + 6, size: 14, font: fonts.bold, color: GOLD, characterSpacing: 4 })
-  page.drawText('GLOBAL INVESTMENTS', { x, y, size: 6.5, font: fonts.reg, color: GRAY, characterSpacing: 2.5 })
+async function drawWordmark(page, pdfDoc, fonts, x, y, GOLD, GRAY) {
+  if (logoPngBytes) {
+    try {
+      const img = await pdfDoc.embedPng(logoPngBytes)
+      const logoH = 32, logoW = Math.round(logoH * img.width / img.height)
+      page.drawImage(img, { x, y: y - 8, width: logoW, height: logoH })
+      page.drawText('ARKA', { x: x + logoW + 10, y: y + 8, size: 13, font: fonts.bold, color: GOLD, characterSpacing: 3 })
+      page.drawText('GLOBAL INVESTMENTS', { x: x + logoW + 10, y: y - 4, size: 6, font: fonts.reg, color: GRAY, characterSpacing: 2 })
+      return
+    } catch { /* fall through */ }
+  }
+  const WHITE = rgb(1, 1, 1)
+  page.drawRectangle({ x, y: y - 4, width: 64, height: 28, color: GOLD })
+  page.drawText('ARKA', { x: x + 7, y: y + 4, size: 13, font: fonts.bold, color: WHITE, characterSpacing: 3 })
+  page.drawText('GLOBAL INVESTMENTS', { x: x + 74, y: y + 8, size: 6, font: fonts.reg, color: GRAY, characterSpacing: 2 })
 }
 
 function wrapText(text, font, size, maxWidth) {
@@ -329,10 +351,10 @@ function wrapText(text, font, size, maxWidth) {
   return lines
 }
 
-function drawHeader(page, fonts, width, height, M, GOLD, GRAY, ROW, title) {
+async function drawHeader(page, pdfDoc, fonts, width, height, M, GOLD, GRAY, ROW, title) {
   page.drawRectangle({ x: 0, y: height - 70, width, height: 70, color: ROW })
   page.drawLine({ start: { x: 0, y: height - 70 }, end: { x: width, y: height - 70 }, thickness: 0.5, color: GOLD })
-  drawWordmark(page, fonts, M, height - 52, GOLD, GRAY)
+  await drawWordmark(page, pdfDoc, fonts, M, height - 52, GOLD, GRAY)
   const tw = fonts.reg.widthOfTextAtSize(title, 7.5)
   page.drawText(title, { x: width - M - tw, y: height - 45, size: 7.5, font: fonts.reg, color: GRAY, characterSpacing: 1.5 })
 }
@@ -360,7 +382,7 @@ async function buildPDF({ firstName, params, results, rows }) {
   const page1 = pdfDoc.addPage([pageW, pageH])
   page1.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: BG })
 
-  drawHeader(page1, fonts, pageW, pageH, M, GOLD, GRAY, ROW, 'INVESTMENT SIMULATION REPORT')
+  await drawHeader(page1, pdfDoc, fonts, pageW, pageH, M, GOLD, GRAY, ROW, 'INVESTMENT SIMULATION REPORT')
 
   let y = pageH - 90
 
@@ -446,7 +468,7 @@ async function buildPDF({ firstName, params, results, rows }) {
   // ── Page 2 — Market Context + Year-by-Year ─────────────────────────────────
   const page2 = pdfDoc.addPage([pageW, pageH])
   page2.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: BG })
-  drawHeader(page2, fonts, pageW, pageH, M, GOLD, GRAY, ROW, 'YEAR-BY-YEAR GROWTH')
+  await drawHeader(page2, pdfDoc, fonts, pageW, pageH, M, GOLD, GRAY, ROW, 'YEAR-BY-YEAR GROWTH')
 
   let y2 = pageH - 92
 
