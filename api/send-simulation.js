@@ -409,11 +409,14 @@ async function buildPDF({ firstName, params, results, rows }) {
     ['Compounding Mode',     params.compound ? 'Compound Interest' : 'Simple Interest'],
   ]
   paramRows.forEach(([label, value], i) => {
-    const rh = 22
+    const rh = 24
     if (i % 2 === 0) page1.drawRectangle({ x: M, y: y - rh + 6, width: W, height: rh, color: ROW })
-    page1.drawText(label, { x: M + 10, y: y - 10, size: 8.5, font: reg, color: GRAY })
-    const vw = reg.widthOfTextAtSize(value, 8.5)
-    page1.drawText(value, { x: M + W - vw - 8, y: y - 10, size: 8.5, font: bold, color: LGRAY })
+    page1.drawText(label, { x: M + 10, y: y - 12, size: 8.5, font: reg, color: GRAY })
+    const maxVw = W - bold.widthOfTextAtSize(label, 8.5) - 30
+    let v = value
+    while (v.length > 4 && bold.widthOfTextAtSize(v, 8.5) > maxVw) v = v.slice(0, -4) + '…'
+    const vw = bold.widthOfTextAtSize(v, 8.5)
+    page1.drawText(v, { x: M + W - vw - 8, y: y - 12, size: 8.5, font: bold, color: LGRAY })
     y -= rh
   })
   y -= 18

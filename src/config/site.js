@@ -11,7 +11,7 @@ export const SITE = {
   tagline: 'Private Quantitative Investment Platform',
   description:
     'Disciplined strategies. Defined risk architecture. Long-term capital growth.',
-  email: 'finances@arkaglobalinvestments.com',
+  email: 'contacto@arkaltd.io',
   investorPortal: 'https://my.arkaltd.io',
   domain: 'www.arkaglobalinvestments.com',
 }

@@ -282,7 +282,7 @@ async function buildPDF({ firstName, profile }) {
 
   // Stats row
   const statW = (W - 24) / 3
-  const statH = 58
+  const statH = 66
   const stats = [
     { label: 'PROFILE SCORE',  value: `${profile.score} / 200`, isGold: true },
     { label: 'REFERENCE RATE', value: String(profile.rate),      isGold: true },
@@ -293,12 +293,16 @@ async function buildPDF({ firstName, profile }) {
     const sy = y - statH
     page.drawRectangle({ x: sx, y: sy, width: statW, height: statH, color: CARD })
     page.drawText(label, { x: sx + 10, y: sy + statH - 16, size: 6.5, font: bold, color: GRAY, characterSpacing: 1 })
-    const vSize = isGold ? 14 : 9.5
+    const vSize  = isGold ? 14 : 9
     const vColor = isGold ? GOLD : LGRAY
     const vFont  = isGold ? bold : reg
-    const vLines = wrapText(value, vFont, vSize, statW - 20)
+    // Cap at 2 lines to stay within card bounds
+    let vLines = wrapText(value, vFont, vSize, statW - 20)
+    if (vLines.length > 2) vLines = [vLines[0], vLines[1].slice(0, -2) + '…']
+    const lineH = vSize + 3
+    const startY = sy + 24
     vLines.forEach((ln, li) => {
-      page.drawText(ln, { x: sx + 10, y: sy + 20 - li * (vSize + 2), size: vSize, font: vFont, color: vColor })
+      page.drawText(ln, { x: sx + 10, y: startY - li * lineH, size: vSize, font: vFont, color: vColor })
     })
   })
   y -= statH + 24

@@ -3,7 +3,8 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
-    "api/*.js": { "runtime": "nodejs20.x" }
+    "api/send-simulation.js": { "includeFiles": "api/fonts/**" },
+    "api/send-profiler.js":   { "includeFiles": "api/fonts/**" }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
@@ -13,9 +14,9 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options",            "value": "nosniff" },
-        { "key": "Referrer-Policy",                   "value": "strict-origin-when-cross-origin" },
-        { "key": "Strict-Transport-Security",         "value": "max-age=63072000; includeSubDomains; preload" }
+        { "key": "X-Content-Type-Options",    "value": "nosniff" },
+        { "key": "Referrer-Policy",           "value": "strict-origin-when-cross-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
       ]
     }
   ]

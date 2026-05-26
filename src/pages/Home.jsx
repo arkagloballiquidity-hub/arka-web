@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { WorldMap } from '@/components/ui/map'
-import { SITE } from '@/config/site'
+import { SITE, RISK_METRICS as SITE_RISK_METRICS } from '@/config/site'
 import { useLang } from '@/context/LanguageContext'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -106,7 +106,7 @@ function GlassCard({ label, value }) {
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
-  const { t } = useLang()
+  const { lang, t } = useLang()
   const videoRef = useRef(null)
   const pageRef  = useRef(null)
 
@@ -176,14 +176,11 @@ export default function Home() {
     { id: 'growth',     profile: t('strategies','growth_profile'),     name: t('strategies','growth_name'),     objective: t('strategies','growth_obj'),     targetRef: t('strategies','growth_target'),     idealFor: t('strategies','growth_ideal') },
     { id: 'alpha',      profile: t('strategies','alpha_profile'),      name: t('strategies','alpha_name'),      objective: t('strategies','alpha_obj'),      targetRef: t('strategies','alpha_target'),      idealFor: t('strategies','alpha_ideal') },
   ]
-  const RISK_METRICS = [
-    { label: t('risk','intraday'),  value: '-0.10% to -0.50% per session' },
-    { label: t('risk','portfolio'), value: '-5% to -10%' },
-    { label: t('risk','leverage'),  value: '1:100 with continuous margin monitoring' },
-    { label: t('risk','var'),       value: 'Value at Risk — daily & portfolio level' },
-    { label: t('risk','session'),   value: 'New York session primary window' },
-    { label: t('risk','dynamic'),   value: 'Continuous exposure review under adverse conditions' },
-  ]
+  const isEs = lang === 'es'
+  const RISK_METRICS = SITE_RISK_METRICS.map(m => ({
+    label: isEs ? m.labelEs : m.labelEn,
+    value: isEs ? m.valueEs : m.value,
+  }))
   const INFRA = [
     { label: t('infra','segregated'), detail: t('infra','segregated_d') },
     { label: t('infra','liquidity'),  detail: t('infra','liquidity_d') },
