@@ -122,6 +122,8 @@ export default function Home() {
       if (!video.duration || isNaN(video.duration)) return
       const dur = video.duration
 
+      video.pause()
+
       // Non-linear keyframe mapping: [scrollProgress, videoSeconds]
       // hero.mp4 (10s total) — original sync
       const keyframes = [
@@ -148,6 +150,18 @@ export default function Home() {
         return dur
       }
 
+      // Throttle seeks to one per animation frame — fixes choppy scrub in Chrome
+      let rafId = null
+      let pendingTime = 0
+      const seekTo = (t) => {
+        pendingTime = t
+        if (rafId) return
+        rafId = requestAnimationFrame(() => {
+          video.currentTime = pendingTime
+          rafId = null
+        })
+      }
+
       ctx = gsap.context(() => {
         ScrollTrigger.create({
           trigger: document.documentElement,
@@ -155,7 +169,7 @@ export default function Home() {
           end: 'bottom bottom',
           scrub: 0.8,
           onUpdate: (self) => {
-            video.currentTime = scrubToTime(self.progress)
+            seekTo(scrubToTime(self.progress))
           },
         })
       })
