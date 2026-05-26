@@ -5,4 +5,5 @@ dist
 node_modules
 .DS_Store
 *.mp4
+!public/videos/hero.mp4
 .claude/
