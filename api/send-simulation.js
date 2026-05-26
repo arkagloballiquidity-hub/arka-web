@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import PDFDocument from 'pdfkit'
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email)))
     return res.status(400).json({ error: 'Invalid email' })
 
-  const safeName  = esc(name || 'Investor')
+  const safeName  = String(name || 'Investor').replace(/[<>&"']/g, '')
   const firstName = safeName.split(' ')[0]
 
   // ── Generate PDF ──────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     html:    buildEmail({ firstName, params, results }),
     attachments: [{
       filename: 'ARKA-Simulation-Report.pdf',
-      content:  pdfBuffer.toString('base64'),
+      content:  Buffer.from(pdfBuffer).toString('base64'),
     }],
   })
 
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Error sending email', detail: mailErr.message || String(mailErr) })
   }
 
-  // ── Telegram notification to Gabriel ────────────────────────────────────────
+  // ── Telegram notification ─────────────────────────────────────────────────
   await sendTelegram(
     `📊 <b>Nueva Simulación — ARKA</b>\n\n` +
     `👤 ${esc(name || '(sin nombre)')}\n` +
@@ -101,46 +101,31 @@ function buildEmail({ firstName, params, results }) {
 <tr><td align="center" style="padding:48px 16px">
 <table width="100%" style="max-width:560px;border-collapse:collapse">
 
-  <!-- Logo / Brand -->
   <tr><td style="padding-bottom:32px;border-bottom:1px solid #161616;text-align:center">
     <p style="font-size:10px;letter-spacing:.55em;text-transform:uppercase;color:#C9A352;margin:0;font-weight:600">
       ARKA GLOBAL INVESTMENTS
     </p>
   </td></tr>
 
-  <!-- Greeting -->
   <tr><td style="padding:36px 0 24px">
-    <p style="font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:#444;margin:0 0 20px">
-      Investment Simulation Report
-    </p>
-    <h1 style="font-size:22px;font-weight:300;margin:0 0 16px;line-height:1.4;color:#fff">
-      Hello, ${firstName}.
-    </h1>
+    <p style="font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:#444;margin:0 0 20px">Investment Simulation Report</p>
+    <h1 style="font-size:22px;font-weight:300;margin:0 0 16px;line-height:1.4;color:#fff">Hello, ${firstName}.</h1>
     <p style="font-size:14px;color:#888;line-height:1.9;margin:0">
       Here are the results of your personalized investment simulation using
       <strong style="color:#ddd">ARKA Global Investments</strong> strategies.
-      These projections are based on target reference rates.
     </p>
   </td></tr>
 
-  <!-- Primary KPI -->
   <tr><td style="padding:8px 0">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td style="padding:24px;background:#0c0c0c;border:1px solid #1e1e1e;border-radius:12px;text-align:center">
-        <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#555;margin:0 0 10px">
-          Projected Capital
-        </p>
-        <p style="font-size:32px;font-weight:300;color:#C9A352;margin:0;letter-spacing:-.5px">
-          ${fmtUSD(results.finalCapital)}
-        </p>
-        <p style="font-size:10px;color:#444;margin:8px 0 0;letter-spacing:.1em">
-          after ${params.years} year${params.years !== 1 ? 's' : ''}
-        </p>
+        <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#555;margin:0 0 10px">Projected Capital</p>
+        <p style="font-size:32px;font-weight:300;color:#C9A352;margin:0;letter-spacing:-.5px">${fmtUSD(results.finalCapital)}</p>
+        <p style="font-size:10px;color:#444;margin:8px 0 0">after ${params.years} year${params.years !== 1 ? 's' : ''}</p>
       </td></tr>
     </table>
   </td></tr>
 
-  <!-- Secondary KPIs -->
   <tr><td style="padding:8px 0 24px">
     <table width="100%" cellpadding="0" cellspacing="8">
       <tr>
@@ -159,11 +144,8 @@ function buildEmail({ firstName, params, results }) {
     </table>
   </td></tr>
 
-  <!-- Parameters -->
   <tr><td style="padding:24px 0;border-top:1px solid #161616;border-bottom:1px solid #161616">
-    <p style="font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:#3a3a3a;margin:0 0 18px">
-      Simulation Parameters
-    </p>
+    <p style="font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:#3a3a3a;margin:0 0 18px">Simulation Parameters</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${rows.map(([k, v]) => `
       <tr>
@@ -173,23 +155,18 @@ function buildEmail({ firstName, params, results }) {
     </table>
   </td></tr>
 
-  <!-- CTA -->
   <tr><td style="padding:36px 0;text-align:center">
-    <p style="font-size:13px;color:#777;margin:0 0 24px;line-height:1.8;max-width:400px;margin-left:auto;margin-right:auto">
-      Ready to put your capital to work with institutional-grade discipline?
-    </p>
+    <p style="font-size:13px;color:#777;margin:0 0 24px;line-height:1.8">Ready to put your capital to work?</p>
     <a href="${process.env.SITE_URL || 'https://arkaglobalinvestments.com'}/access"
       style="display:inline-block;background:#004C45;color:#fff;text-decoration:none;font-size:10px;letter-spacing:.22em;text-transform:uppercase;padding:14px 36px;border-radius:2px">
       Apply for Access
     </a>
   </td></tr>
 
-  <!-- Footer -->
   <tr><td style="padding:24px 0;border-top:1px solid #111;text-align:center">
     <p style="font-size:9px;color:#2a2a2a;line-height:2;margin:0">
       ARKA Global Investments<br>
       ⚠ This simulation uses target reference rates and does not guarantee future results.<br>
-      Investing involves risk, including possible loss of principal.<br>
       Please do not reply to this email.
     </p>
   </td></tr>
@@ -200,128 +177,126 @@ function buildEmail({ firstName, params, results }) {
 </body></html>`
 }
 
-// ── PDF builder ───────────────────────────────────────────────────────────────
-function buildPDF({ firstName, params, results }) {
-  return new Promise((resolve, reject) => {
-    const doc    = new PDFDocument({ size: 'A4', margin: 56, info: { Title: 'ARKA Investment Simulation Report' } })
-    const chunks = []
-    doc.on('data',  c => chunks.push(c))
-    doc.on('end',   () => resolve(Buffer.concat(chunks)))
-    doc.on('error', reject)
+// ── PDF builder (pdf-lib) ─────────────────────────────────────────────────────
+async function buildPDF({ firstName, params, results }) {
+  const pdfDoc = await PDFDocument.create()
+  const page   = pdfDoc.addPage([595, 842]) // A4
+  const { width, height } = page.getSize()
 
-    const GOLD  = '#C9A352'
-    const DARK  = '#0A0A0A'
-    const GRAY  = '#888888'
-    const LIGHT = '#CCCCCC'
-    const W     = doc.page.width - 112  // content width
+  const bold   = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+  const reg    = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const obliq  = await pdfDoc.embedFont(StandardFonts.HelveticaOblique)
 
-    // ── Background ──
-    doc.rect(0, 0, doc.page.width, doc.page.height).fill(DARK)
+  const GOLD  = rgb(0.788, 0.639, 0.322)
+  const WHITE = rgb(1, 1, 1)
+  const LGRAY = rgb(0.8, 0.8, 0.8)
+  const GRAY  = rgb(0.53, 0.53, 0.53)
+  const DGRAY = rgb(0.2, 0.2, 0.2)
+  const BG    = rgb(0.04, 0.04, 0.04)
+  const CARD  = rgb(0.086, 0.086, 0.086)
 
-    // ── Header bar ──
-    doc.rect(0, 0, doc.page.width, 80).fill('#111111')
-    doc.fontSize(8).fillColor(GOLD).font('Helvetica-Bold')
-       .text('ARKA GLOBAL INVESTMENTS', 56, 34, { characterSpacing: 4 })
-    doc.fontSize(8).fillColor(GRAY).font('Helvetica')
-       .text('INVESTMENT SIMULATION REPORT', { align: 'right', characterSpacing: 2 })
+  const M = 56  // margin
+  const W = width - M * 2
 
-    // ── Greeting ──
-    doc.moveDown(2)
-    doc.fontSize(22).fillColor('#FFFFFF').font('Helvetica-Oblique')
-       .text(`Hello, ${firstName}.`, 56)
-    doc.fontSize(10).fillColor(GRAY).font('Helvetica').moveDown(0.4)
-       .text('Here are the results of your personalized investment simulation.', 56)
+  // ── Background ──
+  page.drawRectangle({ x: 0, y: 0, width, height, color: BG })
 
-    // ── Gold divider ──
-    const y1 = doc.y + 18
-    doc.moveTo(56, y1).lineTo(56 + W, y1).lineWidth(0.5).strokeColor(GOLD).stroke()
+  // ── Header bar ──
+  page.drawRectangle({ x: 0, y: height - 70, width, height: 70, color: rgb(0.067, 0.067, 0.067) })
+  page.drawText('ARKA GLOBAL INVESTMENTS', { x: M, y: height - 38, size: 8, font: bold, color: GOLD, characterSpacing: 3 })
+  const rLabel = 'INVESTMENT SIMULATION REPORT'
+  const rW = bold.widthOfTextAtSize(rLabel, 8)
+  page.drawText(rLabel, { x: width - M - rW, y: height - 38, size: 8, font: reg, color: GRAY, characterSpacing: 1.5 })
 
-    // ── Primary KPI ──
-    doc.moveDown(1.8)
-    doc.fontSize(9).fillColor(GRAY).font('Helvetica').characterSpacing(2)
-       .text('PROJECTED CAPITAL', 56, doc.y, { characterSpacing: 2 })
-    doc.fontSize(36).fillColor(GOLD).font('Helvetica-Bold').characterSpacing(0)
-       .text(fmtUSD(results.finalCapital), 56)
-    doc.fontSize(9).fillColor(GRAY).font('Helvetica')
-       .text(`after ${params.years} year${params.years !== 1 ? 's' : ''}`, 56)
+  let y = height - 100
 
-    // ── Secondary KPIs (side by side) ──
-    doc.moveDown(1.2)
-    const kpiY  = doc.y
-    const kpiW  = (W - 16) / 2
+  // ── Greeting ──
+  page.drawText(`Hello, ${firstName}.`, { x: M, y, size: 22, font: obliq, color: WHITE })
+  y -= 22
+  page.drawText('Here are the results of your personalized investment simulation.', { x: M, y, size: 10, font: reg, color: GRAY })
+  y -= 22
 
-    ;[
-      { label: 'TOTAL CONTRIBUTED', value: fmtUSD(results.totalContrib) },
-      { label: 'NET GAIN',          value: `${fmtUSD(results.netGain)}  ×${results.multiplier}` },
-    ].forEach((k, i) => {
-      const x = 56 + i * (kpiW + 16)
-      doc.rect(x, kpiY, kpiW, 54).fill('#161616')
-      doc.fontSize(8).fillColor(GRAY).font('Helvetica').characterSpacing(1.5)
-         .text(k.label, x + 14, kpiY + 12, { width: kpiW - 28 })
-      doc.fontSize(15).fillColor(LIGHT).font('Helvetica-Bold').characterSpacing(0)
-         .text(k.value, x + 14, kpiY + 28, { width: kpiW - 28 })
-    })
+  // ── Gold divider ──
+  page.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: GOLD })
+  y -= 28
 
-    // ── Parameters table ──
-    doc.moveDown(0.5)
-    doc.y = kpiY + 74
-    doc.fontSize(8).fillColor(GRAY).font('Helvetica').characterSpacing(2)
-       .text('SIMULATION PARAMETERS', 56)
-    doc.moveDown(0.5)
+  // ── Primary KPI ──
+  page.drawText('PROJECTED CAPITAL', { x: M, y, size: 8, font: bold, color: GRAY, characterSpacing: 2 })
+  y -= 20
+  const capText = fmtUSD(results.finalCapital)
+  page.drawText(capText, { x: M, y, size: 32, font: bold, color: GOLD })
+  y -= 18
+  page.drawText(`after ${params.years} year${params.years !== 1 ? 's' : ''}`, { x: M, y, size: 9, font: reg, color: GRAY })
+  y -= 28
 
-    const paramRows = [
-      ['Initial Capital',      fmtUSD(params.initial)],
-      ['Monthly Contribution', fmtUSD(params.monthly)],
-      ['Investment Horizon',   `${params.years} years`],
-      ['Blended Annual Rate',  `${params.annual}%`],
-      ['Strategy Mix',         `Foundation ${params.f}%  ·  Growth ${params.g}%  ·  Alpha ${params.a}%`],
-      ['Compounding',          params.compound ? 'Compound Interest' : 'Simple Interest'],
-    ]
-
-    paramRows.forEach(([label, value], i) => {
-      const rowY = doc.y
-      if (i % 2 === 0) doc.rect(56, rowY - 4, W, 22).fill('#111111')
-      doc.fontSize(9).fillColor(GRAY).font('Helvetica').characterSpacing(0)
-         .text(label, 70, rowY)
-      doc.fontSize(9).fillColor(LIGHT).font('Helvetica')
-         .text(value, 56, rowY, { width: W, align: 'right' })
-      doc.moveDown(0.55)
-    })
-
-    // ── Strategy allocation bars ──
-    doc.moveDown(0.8)
-    doc.fontSize(8).fillColor(GRAY).font('Helvetica').characterSpacing(2)
-       .text('STRATEGY ALLOCATION', 56)
-    doc.moveDown(0.6)
-
-    const allocs = [
-      { label: 'Foundation (18%)',       pct: params.f, color: '#C9A352' },
-      { label: 'Strategic Growth (24%)', pct: params.g, color: '#A08040' },
-      { label: 'Alpha Force (36%)',      pct: params.a, color: '#7a6030' },
-    ]
-
-    allocs.forEach(({ label, pct, color }) => {
-      const barY = doc.y
-      doc.fontSize(9).fillColor(LIGHT).font('Helvetica').characterSpacing(0)
-         .text(label, 56, barY)
-      doc.fontSize(9).fillColor(GOLD)
-         .text(`${pct}%`, 56, barY, { width: W, align: 'right' })
-      doc.moveDown(0.3)
-      const trackY = doc.y
-      doc.rect(56, trackY, W, 3).fill('#1e1e1e')
-      if (pct > 0) doc.rect(56, trackY, W * (pct / 100), 3).fill(color)
-      doc.moveDown(0.9)
-    })
-
-    // ── Footer ──
-    const footY = doc.page.height - 60
-    doc.moveTo(56, footY).lineTo(56 + W, footY).lineWidth(0.3).strokeColor('#222222').stroke()
-    doc.fontSize(7.5).fillColor('#333333').font('Helvetica').characterSpacing(0)
-       .text(
-         'ARKA Global Investments  ·  This report uses target reference rates and does not guarantee future results. Investing involves risk.',
-         56, footY + 10, { width: W, align: 'center' }
-       )
-
-    doc.end()
+  // ── Secondary KPIs ──
+  const kpiW = (W - 12) / 2
+  const kpiH = 52
+  const kpis = [
+    { label: 'TOTAL CONTRIBUTED', value: fmtUSD(results.totalContrib) },
+    { label: 'NET GAIN',          value: `${fmtUSD(results.netGain)}  x${results.multiplier}` },
+  ]
+  kpis.forEach(({ label, value }, i) => {
+    const kx = M + i * (kpiW + 12)
+    const ky = y - kpiH
+    page.drawRectangle({ x: kx, y: ky, width: kpiW, height: kpiH, color: CARD })
+    page.drawText(label, { x: kx + 12, y: ky + kpiH - 18, size: 7.5, font: bold, color: GRAY, characterSpacing: 1 })
+    page.drawText(value, { x: kx + 12, y: ky + 14, size: 13, font: bold, color: LGRAY })
   })
+  y -= kpiH + 28
+
+  // ── Parameters ──
+  page.drawText('SIMULATION PARAMETERS', { x: M, y, size: 8, font: bold, color: GRAY, characterSpacing: 2 })
+  y -= 14
+
+  const paramRows = [
+    ['Initial Capital',      fmtUSD(params.initial)],
+    ['Monthly Contribution', fmtUSD(params.monthly)],
+    ['Investment Horizon',   `${params.years} years`],
+    ['Blended Annual Rate',  `${params.annual}%`],
+    ['Strategy Mix',         `Foundation ${params.f}%  /  Growth ${params.g}%  /  Alpha ${params.a}%`],
+    ['Compounding',          params.compound ? 'Compound Interest' : 'Simple Interest'],
+  ]
+
+  paramRows.forEach(([label, value], i) => {
+    const rowH = 22
+    if (i % 2 === 0) {
+      page.drawRectangle({ x: M, y: y - rowH + 6, width: W, height: rowH, color: rgb(0.067, 0.067, 0.067) })
+    }
+    page.drawText(label, { x: M + 10, y: y - 8, size: 9, font: reg, color: GRAY })
+    const vW = reg.widthOfTextAtSize(value, 9)
+    page.drawText(value, { x: M + W - vW, y: y - 8, size: 9, font: reg, color: LGRAY })
+    y -= rowH
+  })
+
+  y -= 20
+
+  // ── Allocation bars ──
+  page.drawText('STRATEGY ALLOCATION', { x: M, y, size: 8, font: bold, color: GRAY, characterSpacing: 2 })
+  y -= 18
+
+  const allocs = [
+    { label: 'Foundation (18%)',       pct: params.f, color: GOLD },
+    { label: 'Strategic Growth (24%)', pct: params.g, color: rgb(0.627, 0.502, 0.251) },
+    { label: 'Alpha Force (36%)',      pct: params.a, color: rgb(0.478, 0.376, 0.188) },
+  ]
+
+  allocs.forEach(({ label, pct, color }) => {
+    page.drawText(label, { x: M, y, size: 9, font: reg, color: LGRAY })
+    const pW = bold.widthOfTextAtSize(`${pct}%`, 9)
+    page.drawText(`${pct}%`, { x: M + W - pW, y, size: 9, font: bold, color: GOLD })
+    y -= 14
+    page.drawRectangle({ x: M, y: y - 2, width: W, height: 3, color: DGRAY })
+    if (pct > 0) page.drawRectangle({ x: M, y: y - 2, width: W * (pct / 100), height: 3, color })
+    y -= 22
+  })
+
+  // ── Footer ──
+  const footY = 40
+  page.drawLine({ start: { x: M, y: footY + 20 }, end: { x: M + W, y: footY + 20 }, thickness: 0.3, color: DGRAY })
+  const footText = 'ARKA Global Investments  ·  Target reference rates only — does not guarantee results. Investing involves risk.'
+  const ftW = reg.widthOfTextAtSize(footText, 7.5)
+  page.drawText(footText, { x: (width - ftW) / 2, y: footY, size: 7.5, font: reg, color: rgb(0.2, 0.2, 0.2) })
+
+  return pdfDoc.save()
 }
