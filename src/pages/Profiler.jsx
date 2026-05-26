@@ -530,6 +530,7 @@ export default function Profiler() {
                   </div>
                   <div className="grid sm:grid-cols-2 gap-3">
                     <input
+                      id="prof-sender-name" name="senderName"
                       type="text"
                       placeholder={lang === 'es' ? 'Tu nombre' : 'Your name'}
                       value={senderName}
@@ -539,6 +540,7 @@ export default function Profiler() {
                         focus:outline-none focus:border-white/25 transition-colors disabled:opacity-40"
                     />
                     <input
+                      id="prof-sender-email" name="senderEmail"
                       type="email"
                       placeholder={lang === 'es' ? 'Tu correo' : 'Your email'}
                       value={senderEmail}

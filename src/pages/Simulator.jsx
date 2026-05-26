@@ -160,13 +160,15 @@ function LineChart({ rows }) {
 
 // ── Slider ───────────────────────────────────────────────────────────────────
 function Slider({ label, value, min, max, step, onChange, fmt }) {
+  const sliderId = `slider-${label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`
   return (
     <div className="space-y-2.5">
       <div className="flex justify-between items-baseline">
-        <label className="text-[10px] tracking-[0.28em] uppercase text-white/55">{label}</label>
+        <label htmlFor={sliderId} className="text-[10px] tracking-[0.28em] uppercase text-white/55">{label}</label>
         <span className="text-white text-base font-light tabular-nums">{fmt ? fmt(value) : value}</span>
       </div>
       <input
+        id={sliderId} name={sliderId}
         type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(Number(e.target.value))}
         className="w-full h-px bg-white/12 appearance-none cursor-pointer
@@ -584,6 +586,7 @@ export default function Simulator() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <input
+                    id="sim-sender-name" name="senderName"
                     type="text"
                     placeholder={lang === 'es' ? 'Tu nombre' : 'Your name'}
                     value={senderName}
@@ -593,6 +596,7 @@ export default function Simulator() {
                       focus:outline-none focus:border-white/25 transition-colors disabled:opacity-40"
                   />
                   <input
+                    id="sim-sender-email" name="senderEmail"
                     type="email"
                     placeholder={lang === 'es' ? 'Tu correo' : 'Your email'}
                     value={senderEmail}
