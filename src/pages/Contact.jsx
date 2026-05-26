@@ -24,7 +24,7 @@ export default function Contact() {
     const data = Object.fromEntries(new FormData(e.target))
 
     try {
-      const res = await fetch('https://formsubmit.co/ajax/finances@arkaglobalinvestments.com', {
+      const res = await fetch('https://formsubmit.co/ajax/contacto@arkaltd.io', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ ...data, _subject: `Investor Inquiry — ${data.name}` }),
