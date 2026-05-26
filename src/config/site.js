@@ -62,12 +62,12 @@ export const STRATEGIES = [
 
 // ⚠️  Risk references — editable, not promises.
 export const RISK_METRICS = [
-  { label: 'Intraday Drawdown Limit', value: '-0.10% to -0.50% per session' },
-  { label: 'Portfolio Stop Framework', value: '-5% to -10%' },
-  { label: 'Maximum Leverage Reference', value: '1:100 with continuous margin monitoring' },
-  { label: 'VaR Methodology', value: 'Value at Risk — daily & portfolio level' },
-  { label: 'Session-Based Controls', value: 'New York session primary window' },
-  { label: 'Dynamic Allocation', value: 'Continuous exposure review under adverse conditions' },
+  { key: 'intraday',  labelEn: 'Intraday Drawdown Limit',       labelEs: 'Límite de Drawdown Intradía',       value: '-0.10% to -0.50% per session',                       valueEs: '-0.10% a -0.50% por sesión' },
+  { key: 'portfolio', labelEn: 'Portfolio Stop Framework',       labelEs: 'Marco de Stop de Portafolio',        value: '-5% to -10%',                                        valueEs: '-5% a -10%' },
+  { key: 'leverage',  labelEn: 'Maximum Leverage Reference',     labelEs: 'Referencia de Apalancamiento Máximo', value: '1:100 with continuous margin monitoring',            valueEs: '1:100 con monitoreo continuo de margen' },
+  { key: 'var',       labelEn: 'VaR Methodology',                labelEs: 'Metodología VaR',                    value: 'Value at Risk — daily & portfolio level',            valueEs: 'Value at Risk — nivel diario y de portafolio' },
+  { key: 'session',   labelEn: 'Session-Based Controls',         labelEs: 'Controles por Sesión',               value: 'New York session primary window',                    valueEs: 'Ventana primaria: sesión de Nueva York' },
+  { key: 'dynamic',   labelEn: 'Dynamic Allocation',             labelEs: 'Asignación Dinámica',                value: 'Continuous exposure review under adverse conditions', valueEs: 'Revisión continua de exposición bajo condiciones adversas' },
 ]
 
 export const TIMELINE = [

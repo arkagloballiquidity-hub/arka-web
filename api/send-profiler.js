@@ -1,8 +1,19 @@
 import { Resend } from 'resend'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const SITE   = process.env.SITE_URL || 'https://arka-web-six.vercel.app'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+let montserratBoldBytes, montserratRegBytes, montserratLightBytes
+try {
+  montserratBoldBytes  = readFileSync(join(__dirname, 'fonts/Montserrat-Bold.ttf'))
+  montserratRegBytes   = readFileSync(join(__dirname, 'fonts/Montserrat-Regular.ttf'))
+  montserratLightBytes = readFileSync(join(__dirname, 'fonts/Montserrat-Light.ttf'))
+} catch { /* fall back to Helvetica */ }
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -37,14 +48,7 @@ export default async function handler(req, res) {
   const safeName  = String(name || 'Investor').replace(/[<>&"']/g, '')
   const firstName = safeName.split(' ')[0]
 
-  // Fetch logo for PDF
-  let logoBytes = null
-  try {
-    const r = await fetch(`${SITE}/logo_arka.png`)
-    if (r.ok) logoBytes = Buffer.from(await r.arrayBuffer())
-  } catch { /* skip */ }
-
-  const pdfBuffer = await buildPDF({ firstName, profile, logoBytes })
+  const pdfBuffer = await buildPDF({ firstName, profile })
 
   const { error: mailErr } = await resend.emails.send({
     from:    process.env.RESEND_FROM || 'ARKA Global Investments <noreply@arkaglobalinvestments.com>',
@@ -90,10 +94,10 @@ function buildEmail({ firstName, profile }) {
 <tr><td align="center" style="padding:48px 16px">
 <table width="100%" style="max-width:580px">
 
-  <!-- Header / Logo -->
+  <!-- Header wordmark -->
   <tr><td style="padding:28px 0 24px;border-bottom:1px solid #1a1a1a;text-align:center">
-    <img src="${SITE}/logo_arka.png" width="36" height="36" alt="ARKA" style="filter:brightness(0)invert(1);vertical-align:middle;margin-right:10px" />
-    <span style="font-size:11px;letter-spacing:.5em;text-transform:uppercase;color:#C9A352;font-weight:700;vertical-align:middle">ARKA GLOBAL INVESTMENTS</span>
+    <span style="font-size:18px;letter-spacing:.45em;text-transform:uppercase;color:#C9A352;font-weight:700;vertical-align:middle;font-family:Arial,sans-serif">ARKA</span>
+    <span style="font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:#666;font-weight:400;vertical-align:middle;margin-left:8px;font-family:Arial,sans-serif">GLOBAL INVESTMENTS</span>
   </td></tr>
 
   <!-- Greeting -->
@@ -108,7 +112,7 @@ function buildEmail({ firstName, profile }) {
   <!-- Profile card -->
   <tr><td style="padding:0 0 20px">
     <table width="100%" cellpadding="0" cellspacing="0">
-      <tr><td style="padding:28px 24px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;text-align:center">
+      <tr><td style="padding:28px 24px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;text-align:center;border-left:3px solid #C9A352">
         <p style="font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:#444;margin:0 0 12px">Your Investor Profile</p>
         <p style="font-size:30px;font-weight:700;color:#C9A352;margin:0 0 14px;letter-spacing:.02em">${esc(profile.name)}</p>
         <p style="font-size:13px;color:#666;margin:0;line-height:1.7">${esc(profile.desc || '')}</p>
@@ -173,7 +177,7 @@ function buildEmail({ firstName, profile }) {
   <tr><td style="padding:20px 0;border-top:1px solid #111;text-align:center">
     <p style="font-size:9px;color:#2a2a2a;line-height:1.9;margin:0">
       ARKA Global Investments &nbsp;·&nbsp; This profile is for informational purposes only and does not constitute financial advice.<br>
-      Strategy assignment is subject to eligibility review and applicable legal procedures. &nbsp;·&nbsp; Please do not reply to this email.
+      Strategy assignment is subject to eligibility review and applicable legal procedures.
     </p>
   </td></tr>
 
@@ -184,139 +188,161 @@ function buildEmail({ firstName, profile }) {
 }
 
 // ── PDF builder ───────────────────────────────────────────────────────────────
-async function buildPDF({ firstName, profile, logoBytes }) {
-  const pdfDoc = await PDFDocument.create()
-  const page   = pdfDoc.addPage([595, 842])
-  const { width, height } = page.getSize()
-
-  const bold  = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-  const reg   = await pdfDoc.embedFont(StandardFonts.Helvetica)
-  const obliq = await pdfDoc.embedFont(StandardFonts.HelveticaOblique)
-
-  const GOLD  = rgb(0.788, 0.639, 0.322)
-  const WHITE = rgb(1, 1, 1)
-  const LGRAY = rgb(0.8, 0.8, 0.8)
-  const GRAY  = rgb(0.53, 0.53, 0.53)
-  const DGRAY = rgb(0.2, 0.2, 0.2)
-  const BG    = rgb(0.04, 0.04, 0.04)
-  const CARD  = rgb(0.086, 0.086, 0.086)
-  const ROW   = rgb(0.067, 0.067, 0.067)
-
-  const M = 48
-  const W = width - M * 2
-
-  page.drawRectangle({ x: 0, y: 0, width, height, color: BG })
-  page.drawRectangle({ x: 0, y: height - 68, width, height: 68, color: ROW })
-
-  // Logo
-  let logoDrawn = false
-  if (logoBytes) {
+async function loadFonts(pdfDoc) {
+  if (montserratBoldBytes && montserratRegBytes && montserratLightBytes) {
     try {
-      const logoImg  = await pdfDoc.embedPng(logoBytes)
-      const logoDims = logoImg.scale(0.016)
-      page.drawImage(logoImg, { x: M, y: height - 48, width: logoDims.width, height: logoDims.height })
-      logoDrawn = true
+      const bold  = await pdfDoc.embedFont(montserratBoldBytes)
+      const reg   = await pdfDoc.embedFont(montserratRegBytes)
+      const light = await pdfDoc.embedFont(montserratLightBytes)
+      return { bold, reg, light }
     } catch { /* fall through */ }
   }
-  const logoX = logoDrawn ? M + 54 : M
-  page.drawText('ARKA GLOBAL INVESTMENTS', { x: logoX, y: height - 36, size: 8, font: bold, color: GOLD, characterSpacing: 3 })
-  const rLabel = 'INVESTOR RISK PROFILE'
-  page.drawText(rLabel, { x: width - M - bold.widthOfTextAtSize(rLabel, 7.5), y: height - 36, size: 7.5, font: reg, color: GRAY, characterSpacing: 1.5 })
+  const bold  = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+  const reg   = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const light = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  return { bold, reg, light }
+}
 
-  let y = height - 88
-
-  // Greeting
-  page.drawText(`Hello, ${firstName}.`, { x: M, y, size: 20, font: obliq, color: WHITE })
-  y -= 20
-  page.drawText('Based on your responses, we have identified your investor profile.', { x: M, y, size: 9.5, font: reg, color: GRAY })
-  y -= 18
-  page.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: GOLD })
-  y -= 22
-
-  // Profile name
-  page.drawText('YOUR INVESTOR PROFILE', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
-  y -= 20
-  page.drawText(String(profile.name || ''), { x: M, y, size: 28, font: bold, color: GOLD })
-  y -= 18
-
-  // Description (word-wrapped)
-  const desc  = String(profile.desc || '')
-  const words = desc.split(' ')
+function wrapText(text, font, size, maxWidth) {
+  const words = String(text).split(' ')
+  const lines = []
   let line = ''
   for (const word of words) {
     const test = line ? `${line} ${word}` : word
-    if (reg.widthOfTextAtSize(test, 10) > W) {
-      page.drawText(line, { x: M, y, size: 10, font: reg, color: LGRAY })
-      y -= 15
+    if (font.widthOfTextAtSize(test, size) > maxWidth) {
+      if (line) lines.push(line)
       line = word
     } else { line = test }
   }
-  if (line) { page.drawText(line, { x: M, y, size: 10, font: reg, color: LGRAY }); y -= 15 }
-  y -= 18
+  if (line) lines.push(line)
+  return lines
+}
+
+async function buildPDF({ firstName, profile }) {
+  const pdfDoc = await PDFDocument.create()
+  const fonts  = await loadFonts(pdfDoc)
+  const { bold, reg, light } = fonts
+
+  const GOLD  = rgb(0.788, 0.639, 0.322)
+  const WHITE = rgb(1, 1, 1)
+  const LGRAY = rgb(0.82, 0.82, 0.82)
+  const GRAY  = rgb(0.55, 0.55, 0.55)
+  const DGRAY = rgb(0.22, 0.22, 0.22)
+  const BG    = rgb(0.035, 0.035, 0.035)
+  const CARD  = rgb(0.078, 0.078, 0.078)
+  const ROW   = rgb(0.06, 0.06, 0.06)
+  const DARK  = rgb(0.14, 0.14, 0.14)
+
+  const pageW = 595, pageH = 842
+  const M = 50
+  const W = pageW - M * 2
+
+  const page = pdfDoc.addPage([pageW, pageH])
+  page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: BG })
+
+  // Header
+  page.drawRectangle({ x: 0, y: pageH - 70, width: pageW, height: 70, color: ROW })
+  page.drawLine({ start: { x: 0, y: pageH - 70 }, end: { x: pageW, y: pageH - 70 }, thickness: 0.5, color: GOLD })
+  page.drawText('ARKA', { x: M, y: pageH - 46, size: 14, font: bold, color: GOLD, characterSpacing: 4 })
+  page.drawText('GLOBAL INVESTMENTS', { x: M, y: pageH - 60, size: 6.5, font: reg, color: GRAY, characterSpacing: 2.5 })
+  const docTitle = 'INVESTOR RISK PROFILE'
+  const dtW = reg.widthOfTextAtSize(docTitle, 7.5)
+  page.drawText(docTitle, { x: pageW - M - dtW, y: pageH - 45, size: 7.5, font: reg, color: GRAY, characterSpacing: 1.5 })
+
+  let y = pageH - 92
+
+  // Greeting
+  page.drawText(`Hello, ${firstName}.`, { x: M, y, size: 22, font: light, color: WHITE })
+  y -= 22
+  page.drawText('Based on your responses, we have identified your investor profile.', { x: M, y, size: 9.5, font: reg, color: GRAY })
+  y -= 14
+  page.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: GOLD })
+  y -= 26
+
+  // Profile label
+  page.drawText('YOUR INVESTOR PROFILE', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  y -= 22
+
+  // Profile name in large text with gold accent bar
+  page.drawRectangle({ x: M, y: y - 50, width: W, height: 60, color: CARD })
+  page.drawRectangle({ x: M, y: y - 50, width: 4, height: 60, color: GOLD })
+  const nameStr = String(profile.name || '')
+  // Scale font size down if name is long
+  const nameSz = nameStr.length > 20 ? 20 : nameStr.length > 15 ? 24 : 28
+  page.drawText(nameStr, { x: M + 18, y: y - 26, size: nameSz, font: bold, color: GOLD })
+  y -= 50 + 14
+
+  // Description (word-wrapped)
+  const descLines = wrapText(String(profile.desc || ''), reg, 10, W)
+  for (const ln of descLines) {
+    page.drawText(ln, { x: M, y, size: 10, font: reg, color: LGRAY })
+    y -= 16
+  }
+  y -= 14
 
   // Stats row
   const statW = (W - 24) / 3
-  const statH = 52
+  const statH = 58
   const stats = [
-    { label: 'PROFILE SCORE',  value: `${profile.score} / 200` },
-    { label: 'REFERENCE RATE', value: String(profile.rate)      },
-    { label: 'STRATEGY',       value: String(profile.strategy)  },
+    { label: 'PROFILE SCORE',  value: `${profile.score} / 200`, isGold: true },
+    { label: 'REFERENCE RATE', value: String(profile.rate),      isGold: true },
+    { label: 'STRATEGY',       value: String(profile.strategy),  isGold: false },
   ]
-  stats.forEach(({ label, value }, i) => {
+  stats.forEach(({ label, value, isGold }, i) => {
     const sx = M + i * (statW + 12)
     const sy = y - statH
     page.drawRectangle({ x: sx, y: sy, width: statW, height: statH, color: CARD })
-    page.drawText(label, { x: sx + 10, y: sy + statH - 14, size: 7, font: bold, color: GRAY, characterSpacing: 1 })
-    const vSize  = i === 2 ? 9 : 13
-    const vColor = i === 2 ? LGRAY : GOLD
-    // Truncate strategy text if too long
-    let v = value
-    while (v.length > 2 && reg.widthOfTextAtSize(v, vSize) > statW - 20) v = v.slice(0, -4) + '…'
-    page.drawText(v, { x: sx + 10, y: sy + 13, size: vSize, font: bold, color: vColor })
+    page.drawText(label, { x: sx + 10, y: sy + statH - 16, size: 6.5, font: bold, color: GRAY, characterSpacing: 1 })
+    const vSize = isGold ? 14 : 9.5
+    const vColor = isGold ? GOLD : LGRAY
+    const vFont  = isGold ? bold : reg
+    const vLines = wrapText(value, vFont, vSize, statW - 20)
+    vLines.forEach((ln, li) => {
+      page.drawText(ln, { x: sx + 10, y: sy + 20 - li * (vSize + 2), size: vSize, font: vFont, color: vColor })
+    })
   })
   y -= statH + 24
 
-  // Allocation bars
+  // Allocation
   page.drawText('SUGGESTED STRATEGY ALLOCATION', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
-  y -= 16
+  y -= 18
 
   const alloc = profile.alloc || {}
   const allocRows = [
-    { label: 'Foundation (18%)',       pct: alloc.foundation || 0, color: GOLD                      },
-    { label: 'Strategic Growth (24%)', pct: alloc.growth     || 0, color: rgb(0.627, 0.502, 0.251)  },
-    { label: 'Alpha Force (36%)',      pct: alloc.alpha      || 0, color: rgb(0.478, 0.376, 0.188)  },
+    { label: 'Foundation', rate: '18%', pct: alloc.foundation || 0, color: GOLD },
+    { label: 'Strategic Growth', rate: '24%', pct: alloc.growth || 0, color: rgb(0.627, 0.502, 0.251) },
+    { label: 'Alpha Force', rate: '36%', pct: alloc.alpha || 0, color: rgb(0.478, 0.376, 0.188) },
   ]
 
-  allocRows.forEach(({ label, pct, color }) => {
-    page.drawText(label, { x: M, y, size: 9, font: reg, color: LGRAY })
-    const pW = bold.widthOfTextAtSize(`${pct}%`, 9)
-    page.drawText(`${pct}%`, { x: M + W - pW, y, size: 9, font: bold, color: GOLD })
-    y -= 14
-    page.drawRectangle({ x: M, y: y - 2, width: W, height: 3, color: DGRAY })
-    if (pct > 0) page.drawRectangle({ x: M, y: y - 2, width: W * (pct / 100), height: 3, color })
-    y -= 22
-  })
+  for (const { label, rate, pct, color } of allocRows) {
+    page.drawText(`${label} (${rate})`, { x: M, y, size: 9.5, font: reg, color: LGRAY })
+    const pctStr = `${pct}%`
+    const pctW = bold.widthOfTextAtSize(pctStr, 9.5)
+    page.drawText(pctStr, { x: M + W - pctW, y, size: 9.5, font: bold, color: GOLD })
+    y -= 15
+    page.drawRectangle({ x: M, y: y - 4, width: W, height: 5, color: DARK })
+    if (pct > 0) page.drawRectangle({ x: M, y: y - 4, width: W * (pct / 100), height: 5, color })
+    y -= 24
+  }
+
+  y -= 10
 
   // Disclaimer
-  y -= 8
-  const disc = 'This profiling is indicative only and does not constitute financial advice. Strategy assignment is subject to eligibility review, KYC/AML, and applicable legal documents.'
-  const discWords = disc.split(' ')
-  let dLine = ''
-  for (const w of discWords) {
-    const test = dLine ? `${dLine} ${w}` : w
-    if (reg.widthOfTextAtSize(test, 7.5) > W) {
-      page.drawText(dLine, { x: M, y, size: 7.5, font: reg, color: DGRAY })
-      y -= 12
-      dLine = w
-    } else { dLine = test }
+  const disc = 'This profiling is indicative only and does not constitute financial advice. Strategy assignment is subject to eligibility review, KYC/AML, and applicable legal documents. ARKA Global Investments — for qualified investors only.'
+  const discLines = wrapText(disc, reg, 7.5, W)
+  page.drawLine({ start: { x: M, y: y + 4 }, end: { x: M + W, y: y + 4 }, thickness: 0.3, color: DARK })
+  y -= 12
+  for (const ln of discLines) {
+    page.drawText(ln, { x: M, y, size: 7.5, font: reg, color: DGRAY })
+    y -= 12
   }
-  if (dLine) page.drawText(dLine, { x: M, y, size: 7.5, font: reg, color: DGRAY })
 
   // Footer
   const footY = 34
-  page.drawLine({ start: { x: M, y: footY + 18 }, end: { x: M + W, y: footY + 18 }, thickness: 0.3, color: DGRAY })
+  page.drawLine({ start: { x: M, y: footY + 18 }, end: { x: M + W, y: footY + 18 }, thickness: 0.3, color: DARK })
   const ft = 'ARKA Global Investments  ·  Investor Profile Report  ·  For informational purposes only.'
-  page.drawText(ft, { x: (width - reg.widthOfTextAtSize(ft, 7)) / 2, y: footY, size: 7, font: reg, color: rgb(0.2, 0.2, 0.2) })
+  const ftW = reg.widthOfTextAtSize(ft, 7)
+  page.drawText(ft, { x: (pageW - ftW) / 2, y: footY, size: 7, font: reg, color: DGRAY })
 
   return pdfDoc.save()
 }

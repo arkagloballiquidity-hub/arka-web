@@ -474,6 +474,43 @@ export default function Simulator() {
                 <LineChart rows={rows} />
               </div>
 
+              {/* Market Context */}
+              <div className="rounded-xl border border-white/8 bg-white/[0.03] p-5 space-y-5">
+                <p className="text-[10px] tracking-[0.28em] uppercase text-white/55">
+                  {lang === 'es' ? 'Contexto de Mercado' : 'Market Context'}
+                </p>
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <p className="text-[10px] tracking-[0.15em] uppercase text-white/38">
+                      {lang === 'es' ? 'Participación EUA' : 'US Market Participation'}
+                    </p>
+                    <p className="text-4xl font-light text-[#C9A352] tabular-nums">55%</p>
+                    <p className="text-[10px] text-white/40 leading-relaxed">
+                      {lang === 'es'
+                        ? 'de los estadounidenses invierte en mercados financieros'
+                        : 'of Americans invest in financial markets'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[10px] tracking-[0.15em] uppercase text-white/38">
+                      {lang === 'es' ? 'Participación México' : 'Mexico Market Participation'}
+                    </p>
+                    <p className="text-4xl font-light text-white/45 tabular-nums">5%</p>
+                    <p className="text-[10px] text-white/40 leading-relaxed">
+                      {lang === 'es'
+                        ? 'de los mexicanos participa en mercados financieros'
+                        : 'of Mexicans participate in financial markets'}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-px bg-white/[0.06]" />
+                <p className="text-[10px] text-white/35 leading-relaxed">
+                  {lang === 'es'
+                    ? 'ARKA existe para cerrar esa brecha — llevando gestión institucional de capital a inversores privados calificados.'
+                    : 'ARKA exists to close that gap — bringing institutional-grade capital management to qualified private investors.'}
+                </p>
+              </div>
+
               {/* Benchmark comparison */}
               <div className="rounded-xl border border-white/8 bg-white/[0.03] p-5 space-y-4">
                 <p className="text-[10px] tracking-[0.28em] uppercase text-white/55 mb-5">{tx.vs}</p>

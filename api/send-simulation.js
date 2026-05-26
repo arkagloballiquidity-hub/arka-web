@@ -1,8 +1,19 @@
 import { Resend } from 'resend'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const SITE   = process.env.SITE_URL || 'https://arka-web-six.vercel.app'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+let montserratBoldBytes, montserratRegBytes, montserratLightBytes
+try {
+  montserratBoldBytes  = readFileSync(join(__dirname, 'fonts/Montserrat-Bold.ttf'))
+  montserratRegBytes   = readFileSync(join(__dirname, 'fonts/Montserrat-Regular.ttf'))
+  montserratLightBytes = readFileSync(join(__dirname, 'fonts/Montserrat-Light.ttf'))
+} catch { /* fall back to Helvetica */ }
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -86,14 +97,7 @@ export default async function handler(req, res) {
     compound: params.compound,
   })
 
-  // Fetch logo for PDF
-  let logoBytes = null
-  try {
-    const r = await fetch(`${SITE}/logo_arka.png`)
-    if (r.ok) logoBytes = Buffer.from(await r.arrayBuffer())
-  } catch { /* skip logo if unavailable */ }
-
-  const pdfBuffer = await buildPDF({ firstName, params, results, rows, logoBytes })
+  const pdfBuffer = await buildPDF({ firstName, params, results, rows })
 
   const { error: mailErr } = await resend.emails.send({
     from:    process.env.RESEND_FROM || 'ARKA Global Investments <noreply@arkaglobalinvestments.com>',
@@ -133,10 +137,8 @@ function buildEmail({ firstName, params, results, rows }) {
     ['Compounding',          params.compound ? 'Compound Interest' : 'Simple Interest'],
   ]
 
-  // Select key years for table
   const step = params.years <= 10 ? 1 : params.years <= 20 ? 2 : 5
   const tableRows = rows.filter((r, i) => i > 0 && (r.year % step === 0 || r.year === params.years))
-
   const final = rows[rows.length - 1]
 
   return `<!DOCTYPE html>
@@ -148,10 +150,10 @@ function buildEmail({ firstName, params, results, rows }) {
 <tr><td align="center" style="padding:48px 16px">
 <table width="100%" style="max-width:580px">
 
-  <!-- Header / Logo -->
+  <!-- Header wordmark -->
   <tr><td style="padding:28px 0 24px;border-bottom:1px solid #1a1a1a;text-align:center">
-    <img src="${SITE}/logo_arka.png" width="36" height="36" alt="ARKA" style="filter:brightness(0)invert(1);vertical-align:middle;margin-right:10px" />
-    <span style="font-size:11px;letter-spacing:.5em;text-transform:uppercase;color:#C9A352;font-weight:700;vertical-align:middle">ARKA GLOBAL INVESTMENTS</span>
+    <span style="font-size:18px;letter-spacing:.45em;text-transform:uppercase;color:#C9A352;font-weight:700;vertical-align:middle;font-family:Arial,sans-serif">ARKA</span>
+    <span style="font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:#666;font-weight:400;vertical-align:middle;margin-left:8px;font-family:Arial,sans-serif">GLOBAL INVESTMENTS</span>
   </td></tr>
 
   <!-- Greeting -->
@@ -200,6 +202,29 @@ function buildEmail({ firstName, params, results, rows }) {
         <td style="padding:9px 12px;font-size:11px;color:#bbb;text-align:right">${v}</td>
       </tr>`).join('')}
     </table>
+  </td></tr>
+
+  <!-- Market Context -->
+  <tr><td style="padding:28px 0;border-top:1px solid #1a1a1a">
+    <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#3a3a3a;margin:0 0 20px">Market Context</p>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="width:49%;padding:20px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
+          <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">US Market Participation</p>
+          <p style="font-size:28px;font-weight:700;color:#C9A352;margin:0">55%</p>
+          <p style="font-size:9px;color:#555;margin:8px 0 0;line-height:1.6">of Americans invest in financial markets</p>
+        </td>
+        <td style="width:2%"></td>
+        <td style="width:49%;padding:20px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
+          <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">Mexico Market Participation</p>
+          <p style="font-size:28px;font-weight:700;color:#888;margin:0">5%</p>
+          <p style="font-size:9px;color:#555;margin:8px 0 0;line-height:1.6">of Mexicans participate in financial markets</p>
+        </td>
+      </tr>
+    </table>
+    <p style="font-size:10px;color:#444;margin:16px 0 0;line-height:1.7;text-align:center">
+      ARKA exists to close that gap — bringing institutional-grade capital management to qualified private investors.
+    </p>
   </td></tr>
 
   <!-- Benchmark comparison -->
@@ -258,7 +283,7 @@ function buildEmail({ firstName, params, results, rows }) {
   <tr><td style="padding:20px 0;border-top:1px solid #111;text-align:center">
     <p style="font-size:9px;color:#2a2a2a;line-height:1.9;margin:0">
       ARKA Global Investments &nbsp;·&nbsp; This simulation uses target reference rates and does not guarantee future results.<br>
-      Investing involves risk, including possible loss of principal. &nbsp;·&nbsp; Please do not reply to this email.
+      Investing involves risk, including possible loss of capital.
     </p>
   </td></tr>
 
@@ -269,178 +294,243 @@ function buildEmail({ firstName, params, results, rows }) {
 }
 
 // ── PDF builder ───────────────────────────────────────────────────────────────
-async function buildPDF({ firstName, params, results, rows, logoBytes }) {
-  const pdfDoc = await PDFDocument.create()
-  const page   = pdfDoc.addPage([595, 842])
-  const { width, height } = page.getSize()
-
+async function loadFonts(pdfDoc) {
+  if (montserratBoldBytes && montserratRegBytes && montserratLightBytes) {
+    try {
+      const bold  = await pdfDoc.embedFont(montserratBoldBytes)
+      const reg   = await pdfDoc.embedFont(montserratRegBytes)
+      const light = await pdfDoc.embedFont(montserratLightBytes)
+      return { bold, reg, light }
+    } catch { /* fall through */ }
+  }
   const bold  = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
   const reg   = await pdfDoc.embedFont(StandardFonts.Helvetica)
-  const obliq = await pdfDoc.embedFont(StandardFonts.HelveticaOblique)
+  const light = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  return { bold, reg, light }
+}
+
+function drawWordmark(page, fonts, x, y, GOLD, GRAY) {
+  page.drawText('ARKA', { x, y: y + 6, size: 14, font: fonts.bold, color: GOLD, characterSpacing: 4 })
+  page.drawText('GLOBAL INVESTMENTS', { x, y, size: 6.5, font: fonts.reg, color: GRAY, characterSpacing: 2.5 })
+}
+
+function wrapText(text, font, size, maxWidth) {
+  const words = String(text).split(' ')
+  const lines = []
+  let line = ''
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word
+    if (font.widthOfTextAtSize(test, size) > maxWidth) {
+      if (line) lines.push(line)
+      line = word
+    } else { line = test }
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
+function drawHeader(page, fonts, width, height, M, GOLD, GRAY, ROW, title) {
+  page.drawRectangle({ x: 0, y: height - 70, width, height: 70, color: ROW })
+  page.drawLine({ start: { x: 0, y: height - 70 }, end: { x: width, y: height - 70 }, thickness: 0.5, color: GOLD })
+  drawWordmark(page, fonts, M, height - 52, GOLD, GRAY)
+  const tw = fonts.reg.widthOfTextAtSize(title, 7.5)
+  page.drawText(title, { x: width - M - tw, y: height - 45, size: 7.5, font: fonts.reg, color: GRAY, characterSpacing: 1.5 })
+}
+
+async function buildPDF({ firstName, params, results, rows }) {
+  const pdfDoc = await PDFDocument.create()
+  const fonts  = await loadFonts(pdfDoc)
+  const { bold, reg, light } = fonts
 
   const GOLD  = rgb(0.788, 0.639, 0.322)
   const WHITE = rgb(1, 1, 1)
-  const LGRAY = rgb(0.8, 0.8, 0.8)
-  const GRAY  = rgb(0.53, 0.53, 0.53)
-  const DGRAY = rgb(0.2, 0.2, 0.2)
-  const BG    = rgb(0.04, 0.04, 0.04)
-  const CARD  = rgb(0.086, 0.086, 0.086)
-  const ROW   = rgb(0.067, 0.067, 0.067)
+  const LGRAY = rgb(0.82, 0.82, 0.82)
+  const GRAY  = rgb(0.55, 0.55, 0.55)
+  const DGRAY = rgb(0.22, 0.22, 0.22)
+  const BG    = rgb(0.035, 0.035, 0.035)
+  const CARD  = rgb(0.078, 0.078, 0.078)
+  const ROW   = rgb(0.06, 0.06, 0.06)
+  const DARK  = rgb(0.14, 0.14, 0.14)
 
-  const M = 48
-  const W = width - M * 2
+  const pageW = 595, pageH = 842
+  const M = 50
+  const W = pageW - M * 2
 
-  // Background
-  page.drawRectangle({ x: 0, y: 0, width, height, color: BG })
+  // ── Page 1 ─────────────────────────────────────────────────────────────────
+  const page1 = pdfDoc.addPage([pageW, pageH])
+  page1.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: BG })
 
-  // Header
-  page.drawRectangle({ x: 0, y: height - 68, width, height: 68, color: ROW })
+  drawHeader(page1, fonts, pageW, pageH, M, GOLD, GRAY, ROW, 'INVESTMENT SIMULATION REPORT')
 
-  let logoDrawn = false
-  if (logoBytes) {
-    try {
-      const logoImg  = await pdfDoc.embedPng(logoBytes)
-      const logoDims = logoImg.scale(0.016)
-      page.drawImage(logoImg, { x: M, y: height - 48, width: logoDims.width, height: logoDims.height })
-      logoDrawn = true
-    } catch { /* fall through to text */ }
-  }
-  const logoX = logoDrawn ? M + 54 : M
-  page.drawText('ARKA GLOBAL INVESTMENTS', { x: logoX, y: height - 36, size: 8, font: bold, color: GOLD, characterSpacing: 3 })
-  const rLabel = 'INVESTMENT SIMULATION REPORT'
-  page.drawText(rLabel, { x: width - M - bold.widthOfTextAtSize(rLabel, 7.5), y: height - 36, size: 7.5, font: reg, color: GRAY, characterSpacing: 1.5 })
-
-  let y = height - 88
+  let y = pageH - 90
 
   // Greeting
-  page.drawText(`Hello, ${firstName}.`, { x: M, y, size: 20, font: obliq, color: WHITE })
-  y -= 20
-  page.drawText('Here are the results of your personalized investment simulation.', { x: M, y, size: 9.5, font: reg, color: GRAY })
-  y -= 18
-  page.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: GOLD })
+  page1.drawText(`Hello, ${firstName}.`, { x: M, y, size: 22, font: light, color: WHITE })
   y -= 22
+  page1.drawText('Here are the results of your personalized investment simulation.', { x: M, y, size: 9.5, font: reg, color: GRAY })
+  y -= 14
+  page1.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: GOLD })
+  y -= 24
 
-  // Primary KPI
-  page.drawText('PROJECTED CAPITAL', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
-  y -= 18
-  page.drawText(fmtUSD(results.finalCapital), { x: M, y, size: 30, font: bold, color: GOLD })
-  y -= 16
-  page.drawText(`after ${params.years} year${params.years !== 1 ? 's' : ''}`, { x: M, y, size: 9, font: reg, color: GRAY })
-  y -= 22
+  // Primary KPI block
+  const kpiBlockH = 76
+  page1.drawRectangle({ x: M, y: y - kpiBlockH, width: W, height: kpiBlockH, color: CARD })
+  page1.drawRectangle({ x: M, y: y - kpiBlockH, width: 3, height: kpiBlockH, color: GOLD })
+  page1.drawText('PROJECTED CAPITAL', { x: M + 16, y: y - 18, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  page1.drawText(fmtUSD(results.finalCapital), { x: M + 16, y: y - 46, size: 28, font: bold, color: GOLD })
+  page1.drawText(`after ${params.years} year${params.years !== 1 ? 's' : ''}`, { x: M + 16, y: y - 66, size: 9, font: reg, color: GRAY })
+  y -= kpiBlockH + 14
 
   // Secondary KPIs
-  const kpiW = (W - 10) / 2
-  const kpiH = 48
+  const kpiW = (W - 12) / 2
+  const kpiH = 52
   const kpis = [
     { label: 'TOTAL CONTRIBUTED', value: fmtUSD(results.totalContrib) },
-    { label: 'NET GAIN',          value: `${fmtUSD(results.netGain)}  x${results.multiplier}` },
+    { label: 'NET GAIN',          value: `${fmtUSD(results.netGain)}   ×${results.multiplier}` },
   ]
   kpis.forEach(({ label, value }, i) => {
-    const kx = M + i * (kpiW + 10)
+    const kx = M + i * (kpiW + 12)
     const ky = y - kpiH
-    page.drawRectangle({ x: kx, y: ky, width: kpiW, height: kpiH, color: CARD })
-    page.drawText(label, { x: kx + 10, y: ky + kpiH - 14, size: 7, font: bold, color: GRAY, characterSpacing: 1 })
-    page.drawText(value, { x: kx + 10, y: ky + 12, size: 12, font: bold, color: LGRAY })
+    page1.drawRectangle({ x: kx, y: ky, width: kpiW, height: kpiH, color: CARD })
+    page1.drawText(label, { x: kx + 12, y: ky + kpiH - 16, size: 7, font: bold, color: GRAY, characterSpacing: 1 })
+    page1.drawText(value, { x: kx + 12, y: ky + 14, size: 12, font: bold, color: LGRAY })
   })
   y -= kpiH + 22
 
   // Parameters
-  page.drawText('SIMULATION PARAMETERS', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  page1.drawText('SIMULATION PARAMETERS', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
   y -= 14
   const paramRows = [
     ['Initial Capital',      fmtUSD(params.initial)],
     ['Monthly Contribution', fmtUSD(params.monthly)],
     ['Investment Horizon',   `${params.years} years`],
     ['Blended Annual Rate',  `${params.annual}%`],
-    ['Strategy Mix',         `Foundation ${params.f}% / Growth ${params.g}% / Alpha ${params.a}%`],
-    ['Compounding',          params.compound ? 'Compound Interest' : 'Simple Interest'],
+    ['Strategy Mix',         `Foundation ${params.f}%  /  Growth ${params.g}%  /  Alpha ${params.a}%`],
+    ['Compounding Mode',     params.compound ? 'Compound Interest' : 'Simple Interest'],
   ]
   paramRows.forEach(([label, value], i) => {
-    const rh = 20
-    if (i % 2 === 0) page.drawRectangle({ x: M, y: y - rh + 5, width: W, height: rh, color: ROW })
-    page.drawText(label, { x: M + 8, y: y - 8, size: 8.5, font: reg, color: GRAY })
-    page.drawText(value, { x: M + W - reg.widthOfTextAtSize(value, 8.5) - 4, y: y - 8, size: 8.5, font: reg, color: LGRAY })
+    const rh = 22
+    if (i % 2 === 0) page1.drawRectangle({ x: M, y: y - rh + 6, width: W, height: rh, color: ROW })
+    page1.drawText(label, { x: M + 10, y: y - 10, size: 8.5, font: reg, color: GRAY })
+    const vw = reg.widthOfTextAtSize(value, 8.5)
+    page1.drawText(value, { x: M + W - vw - 8, y: y - 10, size: 8.5, font: bold, color: LGRAY })
     y -= rh
   })
-  y -= 16
+  y -= 18
 
-  // Benchmark comparison
-  page.drawText('FINAL VALUE VS BENCHMARKS', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  // Benchmarks
+  page1.drawText('FINAL VALUE VS BENCHMARKS', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
   y -= 16
   const final = rows[rows.length - 1]
   const benchmarks = [
-    { label: 'ARKA',    value: final.arka,  color: GOLD                      },
-    { label: 'S&P 500', value: final.sp500, color: rgb(0.58, 0.64, 0.72)     },
-    { label: 'CETES',   value: final.cetes, color: rgb(0.39, 0.46, 0.55)     },
-    { label: 'Banking', value: final.bank,  color: rgb(0.28, 0.34, 0.42)     },
+    { label: 'ARKA',    value: final.arka,  color: GOLD },
+    { label: 'S&P 500', value: final.sp500, color: rgb(0.58, 0.64, 0.72) },
+    { label: 'CETES',   value: final.cetes, color: rgb(0.39, 0.46, 0.55) },
+    { label: 'Banking', value: final.bank,  color: rgb(0.30, 0.36, 0.44) },
   ]
   benchmarks.forEach(({ label, value, color }) => {
     const pct = value / final.arka
-    page.drawText(label, { x: M, y, size: 8.5, font: reg, color: LGRAY })
-    page.drawText(fmtUSD(value), { x: M + W - reg.widthOfTextAtSize(fmtUSD(value), 8.5), y, size: 8.5, font: reg, color })
+    page1.drawText(label, { x: M, y, size: 8.5, font: bold, color: LGRAY })
+    const vw = reg.widthOfTextAtSize(fmtUSD(value), 8.5)
+    page1.drawText(fmtUSD(value), { x: M + W - vw, y, size: 8.5, font: reg, color })
     y -= 13
-    page.drawRectangle({ x: M, y: y - 2, width: W, height: 3, color: DGRAY })
-    page.drawRectangle({ x: M, y: y - 2, width: W * pct, height: 3, color })
-    y -= 18
+    page1.drawRectangle({ x: M, y: y - 3, width: W, height: 4, color: DARK })
+    page1.drawRectangle({ x: M, y: y - 3, width: Math.max(4, W * pct), height: 4, color })
+    y -= 20
   })
   y -= 8
 
-  // Year-by-year table — add new page if needed
-  if (y < 200) {
-    const page2 = pdfDoc.addPage([595, 842])
-    page2.drawRectangle({ x: 0, y: 0, width, height, color: BG })
-    page2.drawRectangle({ x: 0, y: height - 68, width, height: 68, color: ROW })
-    page2.drawText('ARKA GLOBAL INVESTMENTS', { x: M, y: height - 36, size: 8, font: bold, color: GOLD, characterSpacing: 3 })
-    page2.drawText('YEAR-BY-YEAR GROWTH', { x: width - M - bold.widthOfTextAtSize('YEAR-BY-YEAR GROWTH', 7.5), y: height - 36, size: 7.5, font: reg, color: GRAY, characterSpacing: 1.5 })
-    await drawTable(page2, rows, params, M, height - 90, W, bold, reg, GOLD, GRAY, LGRAY, ROW, DGRAY, BG)
-    // Footer page 2
-    page2.drawLine({ start: { x: M, y: 50 }, end: { x: M + W, y: 50 }, thickness: 0.3, color: DGRAY })
-    const ft = 'ARKA Global Investments  ·  Target reference rates only — does not guarantee results.'
-    page2.drawText(ft, { x: (width - reg.widthOfTextAtSize(ft, 7)) / 2, y: 32, size: 7, font: reg, color: rgb(0.2, 0.2, 0.2) })
-  } else {
-    await drawTable(page, rows, params, M, y, W, bold, reg, GOLD, GRAY, LGRAY, ROW, DGRAY, BG)
-  }
+  // ── Page 2 — Market Context + Year-by-Year ─────────────────────────────────
+  const page2 = pdfDoc.addPage([pageW, pageH])
+  page2.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: BG })
+  drawHeader(page2, fonts, pageW, pageH, M, GOLD, GRAY, ROW, 'YEAR-BY-YEAR GROWTH')
 
-  // Footer page 1
-  const footY = 34
-  page.drawLine({ start: { x: M, y: footY + 18 }, end: { x: M + W, y: footY + 18 }, thickness: 0.3, color: DGRAY })
-  const ft = 'ARKA Global Investments  ·  Target reference rates only — does not guarantee results. Investing involves risk.'
-  page.drawText(ft, { x: (width - reg.widthOfTextAtSize(ft, 7)) / 2, y: footY, size: 7, font: reg, color: rgb(0.2, 0.2, 0.2) })
+  let y2 = pageH - 92
+
+  // Market context block
+  page2.drawText('MARKET CONTEXT', { x: M, y: y2, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  y2 -= 16
+
+  const ctxH = 72
+  const ctxW = (W - 12) / 2
+  const ctxData = [
+    { label: 'US MARKET PARTICIPATION', value: '55%', sub: 'of Americans invest in financial markets', highlight: true },
+    { label: 'MEXICO MARKET PARTICIPATION', value: '5%', sub: 'of Mexicans participate in financial markets', highlight: false },
+  ]
+  ctxData.forEach(({ label, value, sub, highlight }, i) => {
+    const cx = M + i * (ctxW + 12)
+    const cy = y2 - ctxH
+    page2.drawRectangle({ x: cx, y: cy, width: ctxW, height: ctxH, color: CARD })
+    if (highlight) page2.drawRectangle({ x: cx, y: cy, width: 3, height: ctxH, color: GOLD })
+    page2.drawText(label, { x: cx + 12, y: cy + ctxH - 16, size: 6.5, font: bold, color: GRAY, characterSpacing: 1 })
+    page2.drawText(value, { x: cx + 12, y: cy + ctxH - 44, size: 24, font: bold, color: highlight ? GOLD : GRAY })
+    const subLines = wrapText(sub, reg, 7.5, ctxW - 24)
+    subLines.forEach((ln, si) => {
+      page2.drawText(ln, { x: cx + 12, y: cy + 18 - si * 11, size: 7.5, font: reg, color: GRAY })
+    })
+  })
+  y2 -= ctxH + 10
+
+  // Caption
+  const caption = 'ARKA exists to close that gap — bringing institutional-grade capital management to qualified private investors.'
+  const capLines = wrapText(caption, reg, 8.5, W)
+  capLines.forEach((ln, i) => {
+    page2.drawText(ln, { x: M, y: y2 - 14 - i * 13, size: 8.5, font: reg, color: GRAY })
+  })
+  y2 -= 14 + capLines.length * 13 + 20
+  page2.drawLine({ start: { x: M, y: y2 }, end: { x: M + W, y: y2 }, thickness: 0.4, color: DARK })
+  y2 -= 18
+
+  // Year-by-year table
+  page2.drawText('YEAR-BY-YEAR GROWTH', { x: M, y: y2, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  y2 -= 14
+
+  await drawTable(page2, rows, params, M, y2, W, bold, reg, GOLD, GRAY, LGRAY, ROW, DARK, BG)
+
+  // Footer — both pages
+  for (const pg of [page1, page2]) {
+    const footY = 34
+    pg.drawLine({ start: { x: M, y: footY + 18 }, end: { x: M + W, y: footY + 18 }, thickness: 0.3, color: DARK })
+    const ft = 'ARKA Global Investments  ·  Target reference rates only — does not guarantee results. Investing involves risk.'
+    const ftW = reg.widthOfTextAtSize(ft, 7)
+    pg.drawText(ft, { x: (pageW - ftW) / 2, y: footY, size: 7, font: reg, color: DGRAY })
+  }
 
   return pdfDoc.save()
 }
 
-async function drawTable(page, rows, params, M, startY, W, bold, reg, GOLD, GRAY, LGRAY, ROW, DGRAY) {
+async function drawTable(page, rows, params, M, startY, W, bold, reg, GOLD, GRAY, LGRAY, ROW, DARK) {
   let y = startY
   const step = params.years <= 10 ? 1 : params.years <= 20 ? 2 : 5
   const tableRows = rows.filter((r, i) => i > 0 && (r.year % step === 0 || r.year === params.years))
 
   const cols = [
     { label: 'YEAR',        w: 0.08 },
-    { label: 'ARKA',        w: 0.24 },
-    { label: 'S&P 500',     w: 0.24 },
-    { label: 'CETES',       w: 0.24 },
+    { label: 'ARKA',        w: 0.25 },
+    { label: 'S&P 500',     w: 0.25 },
+    { label: 'CETES',       w: 0.22 },
     { label: 'CONTRIBUTED', w: 0.20 },
   ]
 
-  // Header row
-  page.drawRectangle({ x: M, y: y - 18, width: W, height: 18, color: ROW })
-  let cx = M + 6
+  // Header
+  page.drawRectangle({ x: M, y: y - 20, width: W, height: 20, color: DARK })
+  let cx = M + 8
   cols.forEach(({ label, w }) => {
-    page.drawText(label, { x: cx, y: y - 13, size: 7, font: bold, color: GRAY, characterSpacing: 0.8 })
+    page.drawText(label, { x: cx, y: y - 14, size: 7, font: bold, color: GRAY, characterSpacing: 0.8 })
     cx += W * w
   })
-  y -= 18
+  y -= 20
 
   tableRows.forEach((r, i) => {
-    const rh = 17
-    if (i % 2 === 0) page.drawRectangle({ x: M, y: y - rh, width: W, height: rh, color: rgb(0.055, 0.055, 0.055) })
-    const fmtUSD_local = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
-    const cells = [`Yr ${r.year}`, fmtUSD_local(r.arka), fmtUSD_local(r.sp500), fmtUSD_local(r.cetes), fmtUSD_local(r.contributed)]
-    cx = M + 6
+    const rh = 18
+    if (i % 2 === 0) page.drawRectangle({ x: M, y: y - rh, width: W, height: rh, color: ROW })
+    const cells = [`Yr ${r.year}`, fmtUSD(r.arka), fmtUSD(r.sp500), fmtUSD(r.cetes), fmtUSD(r.contributed)]
+    cx = M + 8
     cells.forEach((cell, ci) => {
       const color = ci === 1 ? GOLD : ci === 0 ? GRAY : LGRAY
-      page.drawText(cell, { x: cx, y: y - rh + 5, size: 8, font: ci === 1 ? bold : reg, color })
+      const font  = ci === 1 ? bold : reg
+      const sz    = 8.5
+      page.drawText(cell, { x: cx, y: y - rh + 5, size: sz, font, color })
       cx += W * cols[ci].w
     })
     y -= rh
