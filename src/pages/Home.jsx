@@ -122,20 +122,21 @@ export default function Home() {
       if (!video.duration || isNaN(video.duration)) return
       const dur = video.duration
 
-      video.pause()
+      // Keep decoder warm in Chrome: play at rate=0 so seeks are instant
+      video.playbackRate = 0
+      video.play().catch(() => {})
 
       // Non-linear keyframe mapping: [scrollProgress, videoSeconds]
-      // hero.mp4 (10s total) — original sync
       const keyframes = [
-        [0.00, 0.0],   // top → video start
-        [0.09, 0.8],   // hero ends
-        [0.26, 3.0],   // about ends
-        [0.49, 5.0],   // strategies ends
-        [0.63, 6.8],   // risk ends / map starts
-        [0.66, 8.0],   // MAP CENTER → cityscape
-        [0.68, 8.5],   // map ends / infra starts
-        [0.90, 9.5],   // infra ends
-        [1.00, dur],   // bottom → video end
+        [0.00, 0.0],
+        [0.09, 0.8],
+        [0.26, 3.0],
+        [0.49, 5.0],
+        [0.63, 6.8],
+        [0.66, 8.0],
+        [0.68, 8.5],
+        [0.90, 9.5],
+        [1.00, dur],
       ]
 
       const scrubToTime = (progress) => {
@@ -150,7 +151,7 @@ export default function Home() {
         return dur
       }
 
-      // Throttle seeks to one per animation frame — fixes choppy scrub in Chrome
+      // One seek per animation frame — prevents redundant decode calls
       let rafId = null
       let pendingTime = 0
       const seekTo = (t) => {
@@ -168,9 +169,7 @@ export default function Home() {
           start: 'top top',
           end: 'bottom bottom',
           scrub: 0.8,
-          onUpdate: (self) => {
-            seekTo(scrubToTime(self.progress))
-          },
+          onUpdate: (self) => seekTo(scrubToTime(self.progress)),
         })
       })
     }
