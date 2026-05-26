@@ -113,20 +113,39 @@ export default function Home() {
   // ── Video scrubs across entire page scroll ────────────────────────────────
   useEffect(() => {
     const video = videoRef.current
-    const page  = pageRef.current
-    if (!video || !page) return
+    if (!video) return
 
     let ctx
+    let targetTime = 0
+    let isSeeking  = false
+
+    // Chrome can only process one seek at a time.
+    // Queue the latest time and fire it the moment the previous seek completes.
+    const applySeek = () => {
+      isSeeking = true
+      video.currentTime = targetTime
+    }
+
+    const onSeeked = () => {
+      isSeeking = false
+      if (Math.abs(video.currentTime - targetTime) > 0.033) applySeek()
+    }
+
+    const seekTo = (t) => {
+      targetTime = t
+      if (!isSeeking) applySeek()
+    }
+
+    video.addEventListener('seeked', onSeeked)
 
     const init = () => {
       if (!video.duration || isNaN(video.duration)) return
       const dur = video.duration
 
-      // Keep decoder warm in Chrome: play at rate=0 so seeks are instant
+      // Keep decoder pipeline warm (Chrome needs play() to seek efficiently)
       video.playbackRate = 0
       video.play().catch(() => {})
 
-      // Non-linear keyframe mapping: [scrollProgress, videoSeconds]
       const keyframes = [
         [0.00, 0.0],
         [0.09, 0.8],
@@ -144,31 +163,18 @@ export default function Home() {
           const [s0, t0] = keyframes[i]
           const [s1, t1] = keyframes[i + 1]
           if (progress >= s0 && progress <= s1) {
-            const ratio = (progress - s0) / (s1 - s0)
-            return t0 + ratio * (t1 - t0)
+            return t0 + ((progress - s0) / (s1 - s0)) * (t1 - t0)
           }
         }
         return dur
       }
 
-      // One seek per animation frame — prevents redundant decode calls
-      let rafId = null
-      let pendingTime = 0
-      const seekTo = (t) => {
-        pendingTime = t
-        if (rafId) return
-        rafId = requestAnimationFrame(() => {
-          video.currentTime = pendingTime
-          rafId = null
-        })
-      }
-
       ctx = gsap.context(() => {
         ScrollTrigger.create({
           trigger: document.documentElement,
-          start: 'top top',
-          end: 'bottom bottom',
-          scrub: 0.8,
+          start:   'top top',
+          end:     'bottom bottom',
+          scrub:   0.8,
           onUpdate: (self) => seekTo(scrubToTime(self.progress)),
         })
       })
@@ -181,7 +187,10 @@ export default function Home() {
       video.load()
     }
 
-    return () => ctx?.revert()
+    return () => {
+      ctx?.revert()
+      video.removeEventListener('seeked', onSeeked)
+    }
   }, [])
 
   const STRATEGIES = [
