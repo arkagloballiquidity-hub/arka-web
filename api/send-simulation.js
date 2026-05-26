@@ -105,10 +105,7 @@ export default async function handler(req, res) {
     to:      email,
     subject: 'ARKA — Your Investment Simulation Results',
     html:    buildEmail({ firstName, params, results, rows }),
-    attachments: [
-      { filename: 'ARKA-Simulation-Report.pdf', content: Buffer.from(pdfBuffer).toString('base64') },
-      ...(logoPngBytes ? [{ filename: 'logo_arka.png', content: logoPngBytes.toString('base64'), content_id: 'logo_arka', content_type: 'image/png' }] : []),
-    ],
+    attachments: [{ filename: 'ARKA-Simulation-Report.pdf', content: Buffer.from(pdfBuffer).toString('base64') }],
   })
 
   if (mailErr) {
@@ -159,7 +156,7 @@ function buildEmail({ firstName, params, results, rows }) {
     <table cellpadding="0" cellspacing="0" style="margin:0 auto;display:inline-table">
       <tr>
         <td style="vertical-align:middle;padding-right:14px">
-          <img src="cid:logo_arka" width="40" height="40" alt="ARKA" style="display:block;border:0" />
+          <img src="https://www.arkaglobalinvestments.com/logo_arka.png" width="40" height="40" alt="ARKA" style="display:block;border:0" />
         </td>
         <td style="vertical-align:middle;text-align:left">
           <div style="font-size:16px;letter-spacing:4px;font-weight:700;color:#C9A352;font-family:Arial,sans-serif;text-transform:uppercase">ARKA</div>
