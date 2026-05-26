@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+const SITE   = process.env.SITE_URL || 'https://arka-web-six.vercel.app'
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -21,17 +22,12 @@ async function sendTelegram(text) {
 }
 
 export default async function handler(req, res) {
-  // ── CORS ──────────────────────────────────────────────────────────────────
-  const origin  = req.headers.origin || ''
-  const allowed = (process.env.ALLOWED_ORIGIN || '').split(',').map(s => s.trim())
-  const isOk    = /^https?:\/\/localhost(:\d+)?$/.test(origin) || allowed.includes(origin)
-  res.setHeader('Access-Control-Allow-Origin',  isOk ? origin : 'null')
+  res.setHeader('Access-Control-Allow-Origin',  '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST')   return res.status(405).end()
 
-  // ── Validate ───────────────────────────────────────────────────────────────
   const { name, email, profile } = req.body || {}
   if (!email || !profile)
     return res.status(400).json({ error: 'Missing required fields' })
@@ -41,19 +37,21 @@ export default async function handler(req, res) {
   const safeName  = String(name || 'Investor').replace(/[<>&"']/g, '')
   const firstName = safeName.split(' ')[0]
 
-  // ── Generate PDF ──────────────────────────────────────────────────────────
-  const pdfBuffer = await buildPDF({ firstName, profile })
+  // Fetch logo for PDF
+  let logoBytes = null
+  try {
+    const r = await fetch(`${SITE}/logo_arka.png`)
+    if (r.ok) logoBytes = Buffer.from(await r.arrayBuffer())
+  } catch { /* skip */ }
 
-  // ── Send email ─────────────────────────────────────────────────────────────
+  const pdfBuffer = await buildPDF({ firstName, profile, logoBytes })
+
   const { error: mailErr } = await resend.emails.send({
     from:    process.env.RESEND_FROM || 'ARKA Global Investments <noreply@arkaglobalinvestments.com>',
     to:      email,
     subject: `ARKA — Your Investor Profile: ${esc(profile.name)}`,
     html:    buildEmail({ firstName, profile }),
-    attachments: [{
-      filename: 'ARKA-Investor-Profile.pdf',
-      content:  Buffer.from(pdfBuffer).toString('base64'),
-    }],
+    attachments: [{ filename: 'ARKA-Investor-Profile.pdf', content: Buffer.from(pdfBuffer).toString('base64') }],
   })
 
   if (mailErr) {
@@ -61,14 +59,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Error sending email', detail: mailErr.message || String(mailErr) })
   }
 
-  // ── Telegram notification ─────────────────────────────────────────────────
   await sendTelegram(
     `🎯 <b>Nuevo Perfil — ARKA</b>\n\n` +
-    `👤 ${esc(name || '(sin nombre)')}\n` +
-    `📧 ${esc(email)}\n\n` +
+    `👤 ${esc(name || '(sin nombre)')}\n📧 ${esc(email)}\n\n` +
     `📋 Perfil: <b>${esc(profile.name)}</b>\n` +
     `💹 Tasa referencia: <b>${esc(profile.rate)}</b>\n` +
-    `📊 Estrategia recomendada: <b>${esc(profile.strategy)}</b>\n` +
+    `📊 Estrategia: <b>${esc(profile.strategy)}</b>\n` +
     `🔢 Score: <b>${profile.score} / 200</b>\n` +
     `🔀 Asignación: Foundation ${profile.alloc?.foundation}% · Growth ${profile.alloc?.growth}% · Alpha ${profile.alloc?.alpha}%`
   )
@@ -80,104 +76,104 @@ export default async function handler(req, res) {
 function buildEmail({ firstName, profile }) {
   const alloc = profile.alloc || {}
   const allocBars = [
-    { label: 'Foundation',      val: alloc.foundation || 0, rate: '18%', color: '#C9A352' },
-    { label: 'Strategic Growth', val: alloc.growth    || 0, rate: '24%', color: '#A08040' },
-    { label: 'Alpha Force',      val: alloc.alpha     || 0, rate: '36%', color: '#7a6030' },
+    { label: 'Foundation',       val: alloc.foundation || 0, rate: '18%', color: '#C9A352' },
+    { label: 'Strategic Growth', val: alloc.growth     || 0, rate: '24%', color: '#A08040' },
+    { label: 'Alpha Force',      val: alloc.alpha      || 0, rate: '36%', color: '#7a6030' },
   ]
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARKA Investor Profile</title></head>
-<body style="margin:0;padding:0;background:#050505;font-family:Arial,Helvetica,sans-serif;color:#fff;-webkit-font-smoothing:antialiased">
+<body style="margin:0;padding:0;background:#050505;font-family:Arial,Helvetica,sans-serif;color:#fff">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#050505">
 <tr><td align="center" style="padding:48px 16px">
-<table width="100%" style="max-width:560px;border-collapse:collapse">
+<table width="100%" style="max-width:580px">
 
-  <tr><td style="padding-bottom:32px;border-bottom:1px solid #161616;text-align:center">
-    <p style="font-size:10px;letter-spacing:.55em;text-transform:uppercase;color:#C9A352;margin:0;font-weight:600">ARKA GLOBAL INVESTMENTS</p>
+  <!-- Header / Logo -->
+  <tr><td style="padding:28px 0 24px;border-bottom:1px solid #1a1a1a;text-align:center">
+    <img src="${SITE}/logo_arka.png" width="36" height="36" alt="ARKA" style="filter:brightness(0)invert(1);vertical-align:middle;margin-right:10px" />
+    <span style="font-size:11px;letter-spacing:.5em;text-transform:uppercase;color:#C9A352;font-weight:700;vertical-align:middle">ARKA GLOBAL INVESTMENTS</span>
   </td></tr>
 
-  <tr><td style="padding:36px 0 24px">
-    <p style="font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:#444;margin:0 0 20px">Investor Risk Profile</p>
-    <h1 style="font-size:22px;font-weight:300;margin:0 0 16px;line-height:1.4;color:#fff">Hello, ${firstName}.</h1>
-    <p style="font-size:14px;color:#888;line-height:1.9;margin:0">
-      Based on your responses, we have identified your investor profile within
-      <strong style="color:#ddd">ARKA Global Investments</strong>.
+  <!-- Greeting -->
+  <tr><td style="padding:32px 0 20px">
+    <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#444;margin:0 0 16px">Investor Risk Profile</p>
+    <h1 style="font-size:22px;font-weight:300;margin:0 0 12px;color:#fff">Hello, ${esc(firstName)}.</h1>
+    <p style="font-size:14px;color:#888;line-height:1.8;margin:0">
+      Based on your responses, we have identified your investor profile within <strong style="color:#ccc">ARKA Global Investments</strong>.
     </p>
   </td></tr>
 
-  <tr><td style="padding:8px 0 24px">
+  <!-- Profile card -->
+  <tr><td style="padding:0 0 20px">
     <table width="100%" cellpadding="0" cellspacing="0">
-      <tr><td style="padding:28px;background:#0c0c0c;border:1px solid #1e1e1e;border-radius:12px;text-align:center">
+      <tr><td style="padding:28px 24px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;text-align:center">
         <p style="font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:#444;margin:0 0 12px">Your Investor Profile</p>
-        <p style="font-size:28px;font-weight:300;color:#C9A352;margin:0">${esc(profile.name)}</p>
-        <p style="font-size:12px;color:#666;margin:12px auto 0;line-height:1.7;max-width:380px">${esc(profile.desc || '')}</p>
+        <p style="font-size:30px;font-weight:700;color:#C9A352;margin:0 0 14px;letter-spacing:.02em">${esc(profile.name)}</p>
+        <p style="font-size:13px;color:#666;margin:0;line-height:1.7">${esc(profile.desc || '')}</p>
       </td></tr>
     </table>
   </td></tr>
 
+  <!-- Stats -->
   <tr><td style="padding:0 0 24px">
-    <table width="100%" cellpadding="0" cellspacing="8">
+    <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
-        <td width="32%" style="padding:16px;background:#0c0c0c;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
-          <p style="font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:#444;margin:0 0 8px">Score</p>
-          <p style="font-size:16px;font-weight:300;color:#C9A352;margin:0">${profile.score} / 200</p>
+        <td style="width:32%;padding:16px 12px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
+          <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">Score</p>
+          <p style="font-size:17px;font-weight:700;color:#C9A352;margin:0">${profile.score} / 200</p>
         </td>
-        <td width="8px"></td>
-        <td width="32%" style="padding:16px;background:#0c0c0c;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
-          <p style="font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:#444;margin:0 0 8px">Target Rate</p>
-          <p style="font-size:16px;font-weight:300;color:#C9A352;margin:0">${esc(profile.rate)}</p>
+        <td style="width:2%"></td>
+        <td style="width:32%;padding:16px 12px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
+          <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">Target Rate</p>
+          <p style="font-size:17px;font-weight:700;color:#C9A352;margin:0">${esc(profile.rate)}</p>
         </td>
-        <td width="8px"></td>
-        <td width="32%" style="padding:16px;background:#0c0c0c;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
-          <p style="font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:#444;margin:0 0 8px">Strategy</p>
-          <p style="font-size:13px;font-weight:300;color:#ddd;margin:0">${esc(profile.strategy)}</p>
+        <td style="width:2%"></td>
+        <td style="width:32%;padding:16px 12px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
+          <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">Strategy</p>
+          <p style="font-size:11px;font-weight:400;color:#ccc;margin:0;line-height:1.4">${esc(profile.strategy)}</p>
         </td>
       </tr>
     </table>
   </td></tr>
 
-  <tr><td style="padding:24px 0;border-top:1px solid #161616;border-bottom:1px solid #161616">
-    <p style="font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:#3a3a3a;margin:0 0 20px">Suggested Strategy Allocation</p>
+  <!-- Allocation -->
+  <tr><td style="padding:24px 0;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a">
+    <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#3a3a3a;margin:0 0 20px">Suggested Strategy Allocation</p>
     ${allocBars.map(b => `
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px">
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
       <tr>
-        <td style="font-size:11px;color:#999;padding-bottom:6px">${b.label} <span style="color:#444;font-size:10px">(${b.rate})</span></td>
-        <td style="font-size:11px;color:#C9A352;text-align:right;padding-bottom:6px">${b.val}%</td>
+        <td style="font-size:11px;color:#999;padding-bottom:6px;width:70%">${b.label} <span style="color:#444;font-size:10px">(${b.rate})</span></td>
+        <td style="font-size:11px;color:#C9A352;text-align:right;padding-bottom:6px;width:30%">${b.val}%</td>
       </tr>
-      <tr><td colspan="2">
+      <tr><td colspan="2" style="padding:0">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
-          <td width="${b.val}%" style="height:4px;background:${b.color};border-radius:2px"></td>
-          <td style="height:4px;background:#1a1a1a;border-radius:2px"></td>
+          ${b.val > 0 ? `<td style="width:${b.val}%;height:4px;background:${b.color};border-radius:2px"></td>` : ''}
+          ${b.val < 100 ? `<td style="height:4px;background:#1a1a1a;border-radius:2px"></td>` : ''}
         </tr></table>
       </td></tr>
     </table>`).join('')}
   </td></tr>
 
-  <tr><td style="padding:36px 0;text-align:center">
-    <p style="font-size:13px;color:#777;margin:0 0 24px;line-height:1.8">Your profile is the first step.</p>
+  <!-- CTA -->
+  <tr><td style="padding:32px 0;text-align:center">
+    <p style="font-size:13px;color:#666;margin:0 0 20px;line-height:1.8">Your profile is the first step toward institutional-grade returns.</p>
     <table cellpadding="0" cellspacing="0" style="margin:0 auto"><tr>
       <td style="padding-right:10px">
-        <a href="${process.env.SITE_URL || 'https://arkaglobalinvestments.com'}/access"
-          style="display:inline-block;background:#004C45;color:#fff;text-decoration:none;font-size:10px;letter-spacing:.22em;text-transform:uppercase;padding:14px 28px;border-radius:2px">
-          Apply for Access
-        </a>
+        <a href="${SITE}/access" style="display:inline-block;background:#004C45;color:#fff;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 28px;border-radius:2px">Apply for Access</a>
       </td>
       <td>
-        <a href="${process.env.SITE_URL || 'https://arkaglobalinvestments.com'}/simulator"
-          style="display:inline-block;border:1px solid #2a2a2a;color:#888;text-decoration:none;font-size:10px;letter-spacing:.22em;text-transform:uppercase;padding:14px 28px;border-radius:2px">
-          Run Simulation
-        </a>
+        <a href="${SITE}/simulator" style="display:inline-block;border:1px solid #2a2a2a;color:#777;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 28px;border-radius:2px">Run Simulation</a>
       </td>
     </tr></table>
   </td></tr>
 
-  <tr><td style="padding:24px 0;border-top:1px solid #111;text-align:center">
-    <p style="font-size:9px;color:#2a2a2a;line-height:2;margin:0">
-      ARKA Global Investments<br>
-      This profile is for informational purposes only and does not constitute financial advice.<br>
-      Please do not reply to this email.
+  <!-- Footer -->
+  <tr><td style="padding:20px 0;border-top:1px solid #111;text-align:center">
+    <p style="font-size:9px;color:#2a2a2a;line-height:1.9;margin:0">
+      ARKA Global Investments &nbsp;·&nbsp; This profile is for informational purposes only and does not constitute financial advice.<br>
+      Strategy assignment is subject to eligibility review and applicable legal procedures. &nbsp;·&nbsp; Please do not reply to this email.
     </p>
   </td></tr>
 
@@ -187,8 +183,8 @@ function buildEmail({ firstName, profile }) {
 </body></html>`
 }
 
-// ── PDF builder (pdf-lib) ─────────────────────────────────────────────────────
-async function buildPDF({ firstName, profile }) {
+// ── PDF builder ───────────────────────────────────────────────────────────────
+async function buildPDF({ firstName, profile, logoBytes }) {
   const pdfDoc = await PDFDocument.create()
   const page   = pdfDoc.addPage([595, 842])
   const { width, height } = page.getSize()
@@ -204,84 +200,91 @@ async function buildPDF({ firstName, profile }) {
   const DGRAY = rgb(0.2, 0.2, 0.2)
   const BG    = rgb(0.04, 0.04, 0.04)
   const CARD  = rgb(0.086, 0.086, 0.086)
+  const ROW   = rgb(0.067, 0.067, 0.067)
 
-  const M = 56
+  const M = 48
   const W = width - M * 2
 
-  // ── Background ──
   page.drawRectangle({ x: 0, y: 0, width, height, color: BG })
+  page.drawRectangle({ x: 0, y: height - 68, width, height: 68, color: ROW })
 
-  // ── Header bar ──
-  page.drawRectangle({ x: 0, y: height - 70, width, height: 70, color: rgb(0.067, 0.067, 0.067) })
-  page.drawText('ARKA GLOBAL INVESTMENTS', { x: M, y: height - 38, size: 8, font: bold, color: GOLD, characterSpacing: 3 })
+  // Logo
+  let logoDrawn = false
+  if (logoBytes) {
+    try {
+      const logoImg  = await pdfDoc.embedPng(logoBytes)
+      const logoDims = logoImg.scale(0.016)
+      page.drawImage(logoImg, { x: M, y: height - 48, width: logoDims.width, height: logoDims.height })
+      logoDrawn = true
+    } catch { /* fall through */ }
+  }
+  const logoX = logoDrawn ? M + 54 : M
+  page.drawText('ARKA GLOBAL INVESTMENTS', { x: logoX, y: height - 36, size: 8, font: bold, color: GOLD, characterSpacing: 3 })
   const rLabel = 'INVESTOR RISK PROFILE'
-  const rW = bold.widthOfTextAtSize(rLabel, 8)
-  page.drawText(rLabel, { x: width - M - rW, y: height - 38, size: 8, font: reg, color: GRAY, characterSpacing: 1.5 })
+  page.drawText(rLabel, { x: width - M - bold.widthOfTextAtSize(rLabel, 7.5), y: height - 36, size: 7.5, font: reg, color: GRAY, characterSpacing: 1.5 })
 
-  let y = height - 100
+  let y = height - 88
 
-  // ── Greeting ──
-  page.drawText(`Hello, ${firstName}.`, { x: M, y, size: 22, font: obliq, color: WHITE })
-  y -= 22
-  page.drawText('Based on your responses, we have identified your investor profile.', { x: M, y, size: 10, font: reg, color: GRAY })
-  y -= 22
-
-  // ── Gold divider ──
+  // Greeting
+  page.drawText(`Hello, ${firstName}.`, { x: M, y, size: 20, font: obliq, color: WHITE })
+  y -= 20
+  page.drawText('Based on your responses, we have identified your investor profile.', { x: M, y, size: 9.5, font: reg, color: GRAY })
+  y -= 18
   page.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: GOLD })
-  y -= 28
-
-  // ── Profile name ──
-  page.drawText('YOUR INVESTOR PROFILE', { x: M, y, size: 8, font: bold, color: GRAY, characterSpacing: 2 })
-  y -= 22
-  page.drawText(profile.name || '', { x: M, y, size: 30, font: bold, color: GOLD })
   y -= 22
 
-  // Wrap description
-  const desc = profile.desc || ''
+  // Profile name
+  page.drawText('YOUR INVESTOR PROFILE', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  y -= 20
+  page.drawText(String(profile.name || ''), { x: M, y, size: 28, font: bold, color: GOLD })
+  y -= 18
+
+  // Description (word-wrapped)
+  const desc  = String(profile.desc || '')
   const words = desc.split(' ')
   let line = ''
-  const lineH = 16
   for (const word of words) {
     const test = line ? `${line} ${word}` : word
     if (reg.widthOfTextAtSize(test, 10) > W) {
       page.drawText(line, { x: M, y, size: 10, font: reg, color: LGRAY })
-      y -= lineH
+      y -= 15
       line = word
-    } else {
-      line = test
-    }
+    } else { line = test }
   }
-  if (line) { page.drawText(line, { x: M, y, size: 10, font: reg, color: LGRAY }); y -= lineH }
-  y -= 16
+  if (line) { page.drawText(line, { x: M, y, size: 10, font: reg, color: LGRAY }); y -= 15 }
+  y -= 18
 
-  // ── Stats row ──
+  // Stats row
   const statW = (W - 24) / 3
-  const statH = 54
+  const statH = 52
   const stats = [
     { label: 'PROFILE SCORE',  value: `${profile.score} / 200` },
-    { label: 'REFERENCE RATE', value: profile.rate              },
-    { label: 'STRATEGY',       value: profile.strategy          },
+    { label: 'REFERENCE RATE', value: String(profile.rate)      },
+    { label: 'STRATEGY',       value: String(profile.strategy)  },
   ]
   stats.forEach(({ label, value }, i) => {
     const sx = M + i * (statW + 12)
     const sy = y - statH
     page.drawRectangle({ x: sx, y: sy, width: statW, height: statH, color: CARD })
-    page.drawText(label, { x: sx + 10, y: sy + statH - 16, size: 7, font: bold, color: GRAY, characterSpacing: 1 })
-    const vSize = i === 2 ? 9 : 14
+    page.drawText(label, { x: sx + 10, y: sy + statH - 14, size: 7, font: bold, color: GRAY, characterSpacing: 1 })
+    const vSize  = i === 2 ? 9 : 13
     const vColor = i === 2 ? LGRAY : GOLD
-    page.drawText(String(value || ''), { x: sx + 10, y: sy + 12, size: vSize, font: bold, color: vColor })
+    // Truncate strategy text if too long
+    let v = value
+    while (v.length > 2 && reg.widthOfTextAtSize(v, vSize) > statW - 20) v = v.slice(0, -4) + '…'
+    page.drawText(v, { x: sx + 10, y: sy + 13, size: vSize, font: bold, color: vColor })
   })
-  y -= statH + 28
+  y -= statH + 24
 
-  // ── Allocation bars ──
-  page.drawText('SUGGESTED STRATEGY ALLOCATION', { x: M, y, size: 8, font: bold, color: GRAY, characterSpacing: 2 })
-  y -= 18
+  // Allocation bars
+  page.drawText('SUGGESTED STRATEGY ALLOCATION', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  y -= 16
 
   const alloc = profile.alloc || {}
   const allocRows = [
-    { label: 'Foundation (18%)',       pct: alloc.foundation || 0, color: GOLD },
-    { label: 'Strategic Growth (24%)', pct: alloc.growth     || 0, color: rgb(0.627, 0.502, 0.251) },
-    { label: 'Alpha Force (36%)',      pct: alloc.alpha      || 0, color: rgb(0.478, 0.376, 0.188) },
+    { label: 'Foundation (18%)',       pct: alloc.foundation || 0, color: GOLD                      },
+    { label: 'Strategic Growth (24%)', pct: alloc.growth     || 0, color: rgb(0.627, 0.502, 0.251)  },
+    { label: 'Alpha Force (36%)',      pct: alloc.alpha      || 0, color: rgb(0.478, 0.376, 0.188)  },
   ]
 
   allocRows.forEach(({ label, pct, color }) => {
@@ -294,7 +297,7 @@ async function buildPDF({ firstName, profile }) {
     y -= 22
   })
 
-  // ── Disclaimer ──
+  // Disclaimer
   y -= 8
   const disc = 'This profiling is indicative only and does not constitute financial advice. Strategy assignment is subject to eligibility review, KYC/AML, and applicable legal documents.'
   const discWords = disc.split(' ')
@@ -303,18 +306,17 @@ async function buildPDF({ firstName, profile }) {
     const test = dLine ? `${dLine} ${w}` : w
     if (reg.widthOfTextAtSize(test, 7.5) > W) {
       page.drawText(dLine, { x: M, y, size: 7.5, font: reg, color: DGRAY })
-      y -= 13
+      y -= 12
       dLine = w
     } else { dLine = test }
   }
   if (dLine) page.drawText(dLine, { x: M, y, size: 7.5, font: reg, color: DGRAY })
 
-  // ── Footer ──
-  const footY = 40
-  page.drawLine({ start: { x: M, y: footY + 20 }, end: { x: M + W, y: footY + 20 }, thickness: 0.3, color: DGRAY })
-  const footText = 'ARKA Global Investments  ·  Investor Profile Report  ·  For informational purposes only.'
-  const ftW = reg.widthOfTextAtSize(footText, 7.5)
-  page.drawText(footText, { x: (width - ftW) / 2, y: footY, size: 7.5, font: reg, color: rgb(0.2, 0.2, 0.2) })
+  // Footer
+  const footY = 34
+  page.drawLine({ start: { x: M, y: footY + 18 }, end: { x: M + W, y: footY + 18 }, thickness: 0.3, color: DGRAY })
+  const ft = 'ARKA Global Investments  ·  Investor Profile Report  ·  For informational purposes only.'
+  page.drawText(ft, { x: (width - reg.widthOfTextAtSize(ft, 7)) / 2, y: footY, size: 7, font: reg, color: rgb(0.2, 0.2, 0.2) })
 
   return pdfDoc.save()
 }
