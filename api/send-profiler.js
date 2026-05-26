@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import PDFDocument from 'pdfkit'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -40,12 +41,19 @@ export default async function handler(req, res) {
   const safeName  = esc(name || 'Investor')
   const firstName = safeName.split(' ')[0]
 
+  // ── Generate PDF ──────────────────────────────────────────────────────────
+  const pdfBuffer = await buildPDF({ firstName, profile })
+
   // ── Send email ─────────────────────────────────────────────────────────────
   const { error: mailErr } = await resend.emails.send({
-    from:    process.env.RESEND_FROM || 'ARKA Global Investments <noreply@arkaglobal.io>',
+    from:    process.env.RESEND_FROM || 'ARKA Global Investments <noreply@arkaglobalinvestments.com>',
     to:      email,
     subject: `ARKA — Your Investor Profile: ${esc(profile.name)}`,
     html:    buildEmail({ firstName, profile }),
+    attachments: [{
+      filename: 'ARKA-Investor-Profile.pdf',
+      content:  pdfBuffer.toString('base64'),
+    }],
   })
 
   if (mailErr) {
@@ -208,4 +216,111 @@ function buildEmail({ firstName, profile }) {
 </td></tr>
 </table>
 </body></html>`
+}
+
+// ── PDF builder ───────────────────────────────────────────────────────────────
+function buildPDF({ firstName, profile }) {
+  return new Promise((resolve, reject) => {
+    const doc    = new PDFDocument({ size: 'A4', margin: 56, info: { Title: 'ARKA Investor Profile Report' } })
+    const chunks = []
+    doc.on('data',  c => chunks.push(c))
+    doc.on('end',   () => resolve(Buffer.concat(chunks)))
+    doc.on('error', reject)
+
+    const GOLD  = '#C9A352'
+    const DARK  = '#0A0A0A'
+    const GRAY  = '#888888'
+    const LIGHT = '#CCCCCC'
+    const W     = doc.page.width - 112
+
+    // ── Background ──
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill(DARK)
+
+    // ── Header bar ──
+    doc.rect(0, 0, doc.page.width, 80).fill('#111111')
+    doc.fontSize(8).fillColor(GOLD).font('Helvetica-Bold')
+       .text('ARKA GLOBAL INVESTMENTS', 56, 34, { characterSpacing: 4 })
+    doc.fontSize(8).fillColor(GRAY).font('Helvetica')
+       .text('INVESTOR RISK PROFILE', { align: 'right', characterSpacing: 2 })
+
+    // ── Greeting ──
+    doc.moveDown(2)
+    doc.fontSize(22).fillColor('#FFFFFF').font('Helvetica-Oblique')
+       .text(`Hello, ${firstName}.`, 56)
+    doc.fontSize(10).fillColor(GRAY).font('Helvetica').moveDown(0.4)
+       .text('Based on your responses, we have identified your investor profile.', 56)
+
+    // ── Gold divider ──
+    const y1 = doc.y + 18
+    doc.moveTo(56, y1).lineTo(56 + W, y1).lineWidth(0.5).strokeColor(GOLD).stroke()
+
+    // ── Profile name ──
+    doc.moveDown(2)
+    doc.fontSize(9).fillColor(GRAY).font('Helvetica').characterSpacing(2)
+       .text('YOUR INVESTOR PROFILE', 56)
+    doc.fontSize(34).fillColor(GOLD).font('Helvetica-Bold').characterSpacing(0).moveDown(0.3)
+       .text(profile.name, 56)
+    doc.fontSize(11).fillColor(LIGHT).font('Helvetica').moveDown(0.4)
+       .text(profile.desc || '', 56, doc.y, { width: W, lineGap: 4 })
+
+    // ── Stats row ──
+    doc.moveDown(1.4)
+    const statsY = doc.y
+    const statW  = (W - 32) / 3
+
+    ;[
+      { label: 'PROFILE SCORE',      value: `${profile.score} / 200` },
+      { label: 'REFERENCE RATE',     value: profile.rate            },
+      { label: 'STRATEGY',           value: profile.strategy        },
+    ].forEach((s, i) => {
+      const x = 56 + i * (statW + 16)
+      doc.rect(x, statsY, statW, 56).fill('#161616')
+      doc.fontSize(7.5).fillColor(GRAY).font('Helvetica').characterSpacing(1.5)
+         .text(s.label, x + 12, statsY + 10, { width: statW - 24 })
+      doc.fontSize(i === 2 ? 10 : 15).fillColor(i === 2 ? LIGHT : GOLD).font('Helvetica-Bold').characterSpacing(0)
+         .text(s.value, x + 12, statsY + 28, { width: statW - 24 })
+    })
+
+    // ── Allocation bars ──
+    doc.y = statsY + 76
+    doc.fontSize(8).fillColor(GRAY).font('Helvetica').characterSpacing(2)
+       .text('SUGGESTED STRATEGY ALLOCATION', 56)
+    doc.moveDown(0.6)
+
+    const alloc = profile.alloc || {}
+    const allocRows = [
+      { label: 'Foundation',       rate: '18%', pct: alloc.foundation || 0, color: '#C9A352' },
+      { label: 'Strategic Growth', rate: '24%', pct: alloc.growth     || 0, color: '#A08040' },
+      { label: 'Alpha Force',      rate: '36%', pct: alloc.alpha      || 0, color: '#7a6030' },
+    ]
+
+    allocRows.forEach(({ label, rate, pct, color }) => {
+      const barY = doc.y
+      doc.fontSize(9).fillColor(LIGHT).font('Helvetica').characterSpacing(0)
+         .text(`${label}  `, 56, barY)
+      doc.fontSize(9).fillColor(GRAY)
+         .text(`(${rate})`, { continued: false })
+      doc.fontSize(9).fillColor(GOLD)
+         .text(`${pct}%`, 56, barY, { width: W, align: 'right' })
+      doc.moveDown(0.3)
+      const trackY = doc.y
+      doc.rect(56, trackY, W, 3).fill('#1e1e1e')
+      if (pct > 0) doc.rect(56, trackY, W * (pct / 100), 3).fill(color)
+      doc.moveDown(1)
+    })
+
+    // ── Disclaimer ──
+    doc.moveDown(0.5)
+    doc.fontSize(8).fillColor('#444444').font('Helvetica')
+       .text('⚠  This profiling is indicative only and does not constitute financial advice. Strategy assignment is subject to eligibility review, KYC/AML procedures, and execution of applicable legal documents.', 56, doc.y, { width: W, lineGap: 3 })
+
+    // ── Footer ──
+    const footY = doc.page.height - 60
+    doc.moveTo(56, footY).lineTo(56 + W, footY).lineWidth(0.3).strokeColor('#222222').stroke()
+    doc.fontSize(7.5).fillColor('#333333').font('Helvetica')
+       .text('ARKA Global Investments  ·  Investor Profile Report  ·  For informational purposes only.',
+         56, footY + 10, { width: W, align: 'center' })
+
+    doc.end()
+  })
 }

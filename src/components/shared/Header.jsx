@@ -32,7 +32,7 @@ export default function Header() {
   useEffect(() => { setMenuOpen(false) }, [location])
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#050505]/85 backdrop-blur-md border-b border-white/[0.06]">
       <div className="flex items-center justify-between px-6 md:px-10 h-16 md:h-20">
 
         {/* Logo */}

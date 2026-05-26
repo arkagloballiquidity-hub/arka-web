@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import PDFDocument from 'pdfkit'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -44,12 +45,19 @@ export default async function handler(req, res) {
   const safeName  = esc(name || 'Investor')
   const firstName = safeName.split(' ')[0]
 
+  // ── Generate PDF ──────────────────────────────────────────────────────────
+  const pdfBuffer = await buildPDF({ firstName, params, results })
+
   // ── Send email ─────────────────────────────────────────────────────────────
   const { error: mailErr } = await resend.emails.send({
-    from:    process.env.RESEND_FROM || 'ARKA Global Investments <noreply@arkaglobal.io>',
+    from:    process.env.RESEND_FROM || 'ARKA Global Investments <noreply@arkaglobalinvestments.com>',
     to:      email,
     subject: 'ARKA — Your Investment Simulation Results',
     html:    buildEmail({ firstName, params, results }),
+    attachments: [{
+      filename: 'ARKA-Simulation-Report.pdf',
+      content:  pdfBuffer.toString('base64'),
+    }],
   })
 
   if (mailErr) {
@@ -190,4 +198,130 @@ function buildEmail({ firstName, params, results }) {
 </td></tr>
 </table>
 </body></html>`
+}
+
+// ── PDF builder ───────────────────────────────────────────────────────────────
+function buildPDF({ firstName, params, results }) {
+  return new Promise((resolve, reject) => {
+    const doc    = new PDFDocument({ size: 'A4', margin: 56, info: { Title: 'ARKA Investment Simulation Report' } })
+    const chunks = []
+    doc.on('data',  c => chunks.push(c))
+    doc.on('end',   () => resolve(Buffer.concat(chunks)))
+    doc.on('error', reject)
+
+    const GOLD  = '#C9A352'
+    const DARK  = '#0A0A0A'
+    const GRAY  = '#888888'
+    const LIGHT = '#CCCCCC'
+    const W     = doc.page.width - 112  // content width
+
+    // ── Background ──
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill(DARK)
+
+    // ── Header bar ──
+    doc.rect(0, 0, doc.page.width, 80).fill('#111111')
+    doc.fontSize(8).fillColor(GOLD).font('Helvetica-Bold')
+       .text('ARKA GLOBAL INVESTMENTS', 56, 34, { characterSpacing: 4 })
+    doc.fontSize(8).fillColor(GRAY).font('Helvetica')
+       .text('INVESTMENT SIMULATION REPORT', { align: 'right', characterSpacing: 2 })
+
+    // ── Greeting ──
+    doc.moveDown(2)
+    doc.fontSize(22).fillColor('#FFFFFF').font('Helvetica-Oblique')
+       .text(`Hello, ${firstName}.`, 56)
+    doc.fontSize(10).fillColor(GRAY).font('Helvetica').moveDown(0.4)
+       .text('Here are the results of your personalized investment simulation.', 56)
+
+    // ── Gold divider ──
+    const y1 = doc.y + 18
+    doc.moveTo(56, y1).lineTo(56 + W, y1).lineWidth(0.5).strokeColor(GOLD).stroke()
+
+    // ── Primary KPI ──
+    doc.moveDown(1.8)
+    doc.fontSize(9).fillColor(GRAY).font('Helvetica').characterSpacing(2)
+       .text('PROJECTED CAPITAL', 56, doc.y, { characterSpacing: 2 })
+    doc.fontSize(36).fillColor(GOLD).font('Helvetica-Bold').characterSpacing(0)
+       .text(fmtUSD(results.finalCapital), 56)
+    doc.fontSize(9).fillColor(GRAY).font('Helvetica')
+       .text(`after ${params.years} year${params.years !== 1 ? 's' : ''}`, 56)
+
+    // ── Secondary KPIs (side by side) ──
+    doc.moveDown(1.2)
+    const kpiY  = doc.y
+    const kpiW  = (W - 16) / 2
+
+    ;[
+      { label: 'TOTAL CONTRIBUTED', value: fmtUSD(results.totalContrib) },
+      { label: 'NET GAIN',          value: `${fmtUSD(results.netGain)}  ×${results.multiplier}` },
+    ].forEach((k, i) => {
+      const x = 56 + i * (kpiW + 16)
+      doc.rect(x, kpiY, kpiW, 54).fill('#161616')
+      doc.fontSize(8).fillColor(GRAY).font('Helvetica').characterSpacing(1.5)
+         .text(k.label, x + 14, kpiY + 12, { width: kpiW - 28 })
+      doc.fontSize(15).fillColor(LIGHT).font('Helvetica-Bold').characterSpacing(0)
+         .text(k.value, x + 14, kpiY + 28, { width: kpiW - 28 })
+    })
+
+    // ── Parameters table ──
+    doc.moveDown(0.5)
+    doc.y = kpiY + 74
+    doc.fontSize(8).fillColor(GRAY).font('Helvetica').characterSpacing(2)
+       .text('SIMULATION PARAMETERS', 56)
+    doc.moveDown(0.5)
+
+    const paramRows = [
+      ['Initial Capital',      fmtUSD(params.initial)],
+      ['Monthly Contribution', fmtUSD(params.monthly)],
+      ['Investment Horizon',   `${params.years} years`],
+      ['Blended Annual Rate',  `${params.annual}%`],
+      ['Strategy Mix',         `Foundation ${params.f}%  ·  Growth ${params.g}%  ·  Alpha ${params.a}%`],
+      ['Compounding',          params.compound ? 'Compound Interest' : 'Simple Interest'],
+    ]
+
+    paramRows.forEach(([label, value], i) => {
+      const rowY = doc.y
+      if (i % 2 === 0) doc.rect(56, rowY - 4, W, 22).fill('#111111')
+      doc.fontSize(9).fillColor(GRAY).font('Helvetica').characterSpacing(0)
+         .text(label, 70, rowY)
+      doc.fontSize(9).fillColor(LIGHT).font('Helvetica')
+         .text(value, 56, rowY, { width: W, align: 'right' })
+      doc.moveDown(0.55)
+    })
+
+    // ── Strategy allocation bars ──
+    doc.moveDown(0.8)
+    doc.fontSize(8).fillColor(GRAY).font('Helvetica').characterSpacing(2)
+       .text('STRATEGY ALLOCATION', 56)
+    doc.moveDown(0.6)
+
+    const allocs = [
+      { label: 'Foundation (18%)',       pct: params.f, color: '#C9A352' },
+      { label: 'Strategic Growth (24%)', pct: params.g, color: '#A08040' },
+      { label: 'Alpha Force (36%)',      pct: params.a, color: '#7a6030' },
+    ]
+
+    allocs.forEach(({ label, pct, color }) => {
+      const barY = doc.y
+      doc.fontSize(9).fillColor(LIGHT).font('Helvetica').characterSpacing(0)
+         .text(label, 56, barY)
+      doc.fontSize(9).fillColor(GOLD)
+         .text(`${pct}%`, 56, barY, { width: W, align: 'right' })
+      doc.moveDown(0.3)
+      const trackY = doc.y
+      doc.rect(56, trackY, W, 3).fill('#1e1e1e')
+      if (pct > 0) doc.rect(56, trackY, W * (pct / 100), 3).fill(color)
+      doc.moveDown(0.9)
+    })
+
+    // ── Footer ──
+    const footY = doc.page.height - 60
+    doc.moveTo(56, footY).lineTo(56 + W, footY).lineWidth(0.3).strokeColor('#222222').stroke()
+    doc.fontSize(7.5).fillColor('#333333').font('Helvetica').characterSpacing(0)
+       .text(
+         'ARKA Global Investments  ·  This report uses target reference rates and does not guarantee future results. Investing involves risk.',
+         56, footY + 10, { width: W, align: 'center' }
+       )
+
+    doc.end()
+  })
 }
