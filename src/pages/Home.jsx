@@ -147,15 +147,15 @@ export default function Home() {
       video.play().catch(() => {})
 
       const keyframes = [
-        [0.00, 0.0],
-        [0.09, 0.8],
-        [0.26, 3.0],
-        [0.49, 5.0],
-        [0.63, 6.8],
-        [0.66, 8.0],
-        [0.68, 8.5],
-        [0.90, 9.5],
-        [1.00, dur],
+        [0.00,  0.0],   // Hero — B&W Wall St, man walking
+        [0.09,  1.5],   // Hero ends — blue glow starts appearing
+        [0.26,  4.0],   // About ends — digital overlay on NYSE building
+        [0.49,  7.0],   // Strategies ends — full holographic transform
+        [0.63,  9.0],   // Risk ends — immersive blue digital city
+        [0.66, 10.0],   // Map center — world map visible
+        [0.68, 11.0],   // Map ends / Infrastructure starts
+        [0.90, 13.5],   // Infrastructure ends — ARKA logo emerging
+        [1.00,  dur],   // ARKA logo reveal in hand
       ]
 
       const scrubToTime = (progress) => {
