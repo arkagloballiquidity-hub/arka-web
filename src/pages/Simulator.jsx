@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useLang } from '@/context/LanguageContext'
 
@@ -17,14 +17,15 @@ function blended(f, g, a) {
   return (f * RATES.foundation + g * RATES.growth + a * RATES.alpha) / 100
 }
 
+// Days per month (standard, no leap year adjustment for simulation purposes)
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
 function calcProjection({ initial, monthly, years, f, g, a, compound }) {
-  const annual  = blended(f, g, a)
-  const daily   = Math.pow(1 + annual, 1 / 365) - 1
-  const mRate   = compound ? Math.pow(1 + daily, 365 / 12) - 1 : annual / 12
-  // All instruments respect the compound toggle — consistent comparison
-  const mSP    = compound ? Math.pow(1 + BENCH.sp500, 1 / 12) - 1 : BENCH.sp500 / 12
-  const mCetes = compound ? Math.pow(1 + BENCH.cetes, 1 / 12) - 1 : BENCH.cetes / 12
-  const mBank  = compound ? Math.pow(1 + BENCH.bank,  1 / 12) - 1 : BENCH.bank  / 12
+  const annual      = blended(f, g, a)
+  const daily       = Math.pow(1 + annual,      1 / 365) - 1
+  const dailySP     = Math.pow(1 + BENCH.sp500, 1 / 365) - 1
+  const dailyCetes  = Math.pow(1 + BENCH.cetes, 1 / 365) - 1
+  const dailyBank   = Math.pow(1 + BENCH.bank,  1 / 365) - 1
 
   let arka = initial, sp500 = initial, cetes = initial, bank = initial
   const rows = [{ year: 0, arka: initial, sp500: initial, cetes: initial, bank: initial, contributed: initial, months: [] }]
@@ -33,24 +34,39 @@ function calcProjection({ initial, monthly, years, f, g, a, compound }) {
   for (let y = 1; y <= years; y++) {
     const yearMonths = []
     for (let m = 0; m < 12; m++) {
+      const days = MONTH_DAYS[m]
+      let mArka, mSP, mCetes, mBank
+
       if (compound) {
-        arka  = arka  * (1 + mRate)  + monthly
-        sp500 = sp500 * (1 + mSP)   + monthly
+        // Day-accurate: each month compounds exactly by its real number of days
+        mArka  = Math.pow(1 + daily,      days) - 1
+        mSP    = Math.pow(1 + dailySP,    days) - 1
+        mCetes = Math.pow(1 + dailyCetes, days) - 1
+        mBank  = Math.pow(1 + dailyBank,  days) - 1
+        arka  = arka  * (1 + mArka)  + monthly
+        sp500 = sp500 * (1 + mSP)    + monthly
         cetes = cetes * (1 + mCetes) + monthly
         bank  = bank  * (1 + mBank)  + monthly
       } else {
-        arka  += initial * mRate  + monthly
+        // Simple: fixed 1/12 of annual rate, on initial capital only
+        mArka  = annual      / 12
+        mSP    = BENCH.sp500 / 12
+        mCetes = BENCH.cetes / 12
+        mBank  = BENCH.bank  / 12
+        arka  += initial * mArka  + monthly
         sp500 += initial * mSP   + monthly
         cetes += initial * mCetes + monthly
         bank  += initial * mBank  + monthly
       }
       totalContrib += monthly
       yearMonths.push({
-        month: m + 1,
-        arka:  Math.round(arka),
-        sp500: Math.round(sp500),
-        cetes: Math.round(cetes),
-        bank:  Math.round(bank),
+        month:    m + 1,
+        days,
+        mRetPct:  mArka * 100,   // actual monthly return % for this month
+        arka:     Math.round(arka),
+        sp500:    Math.round(sp500),
+        cetes:    Math.round(cetes),
+        bank:     Math.round(bank),
         contributed: Math.round(totalContrib),
       })
     }
@@ -64,6 +80,7 @@ function calcProjection({ initial, monthly, years, f, g, a, compound }) {
       months: yearMonths,
     })
   }
+  const mRate = compound ? Math.pow(1 + daily, 365 / 12) - 1 : annual / 12
   return { rows, annual, mRate }
 }
 
@@ -606,79 +623,123 @@ export default function Simulator() {
 
                 {showTable && (
                   <div className="overflow-x-auto rounded-xl border border-white/8">
-                    <table className="w-full min-w-[700px]">
+                    <table className="w-full min-w-[780px]">
                       <thead>
+                        {/* ── Group labels ── */}
+                        <tr className="border-b border-white/[0.04]">
+                          <th colSpan={2} />
+                          <th colSpan={3} className="px-3 pt-3 pb-1 text-left">
+                            <span className="text-[9px] tracking-[0.25em] uppercase font-normal" style={{ color: PALETTE.arka + 'aa' }}>
+                              ── ARKA
+                            </span>
+                          </th>
+                          <th colSpan={3} className="px-3 pt-3 pb-1 text-left border-l border-white/[0.05]">
+                            <span className="text-[9px] tracking-[0.25em] uppercase text-white/25 font-normal">
+                              ── {lang === 'es' ? 'Benchmarks de Mercado' : 'Market Benchmarks'}
+                            </span>
+                          </th>
+                          <th />
+                        </tr>
+                        {/* ── Column headers ── */}
                         <tr className="border-b border-white/8">
-                          {/* expand toggle col */}
                           <th className="w-8" />
-                          {[
-                            tx.yr,
-                            'ARKA',
-                            lang === 'es' ? 'Ganancia' : 'Gain',
-                            'Ret. %',
-                            'S&P 500',
-                            'CETES',
-                            lang === 'es' ? 'Banca' : 'Banking',
-                            tx.contributed,
-                          ].map(h => (
-                            <th key={h} className="px-3 py-3 text-left text-[10px] tracking-[0.18em] uppercase text-white/45 font-normal whitespace-nowrap">{h}</th>
-                          ))}
+                          {/* Año */}
+                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
+                            <div className="text-[10px] tracking-[0.2em] uppercase text-white/50">{tx.yr}</div>
+                          </th>
+                          {/* ARKA Capital */}
+                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
+                            <div className="text-[10px] tracking-[0.18em] uppercase" style={{ color: PALETTE.arka }}>ARKA</div>
+                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Capital acumulado' : 'Accumulated capital'}</div>
+                          </th>
+                          {/* Ganancia */}
+                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
+                            <div className="text-[10px] tracking-[0.18em] uppercase text-emerald-400/70">{lang === 'es' ? 'Ganancia' : 'Gain'}</div>
+                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Neto de aportaciones' : 'Net of contributions'}</div>
+                          </th>
+                          {/* Rendimiento % */}
+                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
+                            <div className="text-[10px] tracking-[0.18em] uppercase text-emerald-400/60">Ret. %</div>
+                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Rendimiento real' : 'Actual return'}</div>
+                          </th>
+                          {/* S&P 500 */}
+                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap border-l border-white/[0.05]">
+                            <div className="text-[10px] tracking-[0.18em] uppercase" style={{ color: PALETTE.sp500 }}>S&P 500</div>
+                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Acumulado ~10.8%/yr' : 'Accumulated ~10.8%/yr'}</div>
+                          </th>
+                          {/* CETES */}
+                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
+                            <div className="text-[10px] tracking-[0.18em] uppercase" style={{ color: PALETTE.cetes }}>CETES</div>
+                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Acumulado ~9.7%/yr' : 'Accumulated ~9.7%/yr'}</div>
+                          </th>
+                          {/* Banca */}
+                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
+                            <div className="text-[10px] tracking-[0.18em] uppercase" style={{ color: PALETTE.bank }}>{lang === 'es' ? 'Banca' : 'Banking'}</div>
+                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Acumulado ~4.5%/yr' : 'Accumulated ~4.5%/yr'}</div>
+                          </th>
+                          {/* Aportado */}
+                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
+                            <div className="text-[10px] tracking-[0.18em] uppercase text-white/40">{tx.contributed}</div>
+                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Total invertido' : 'Total invested'}</div>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {rows.slice(1).map((r, idx) => {
-                          const prev    = rows[idx]           // row before this one (year - 1)
-                          const gain    = r.arka - prev.arka - (monthly * 12)
-                          const retPct  = prev.arka > 0 ? (gain / prev.arka) * 100 : 0
-                          const isOpen  = expandedYear === r.year
-                          const MONTHS  = lang === 'es'
-                            ? ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-                            : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                          const prev   = rows[idx]
+                          const gain   = r.arka - prev.arka - (monthly * 12)
+                          const retPct = prev.arka > 0 ? (gain / prev.arka) * 100 : 0
+                          const isOpen = expandedYear === r.year
+                          const MONTHS = lang === 'es'
+                            ? ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+                            : ['January','February','March','April','May','June','July','August','September','October','November','December']
+                          const isEven = idx % 2 === 0
                           return (
-                            <>
+                            <React.Fragment key={r.year}>
                               {/* ── Year row ── */}
                               <tr
-                                key={r.year}
                                 onClick={() => setExpandedYear(isOpen ? null : r.year)}
-                                className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors cursor-pointer group"
+                                className={`border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors cursor-pointer group ${isEven ? 'bg-white/[0.01]' : ''}`}
                               >
-                                {/* chevron */}
-                                <td className="pl-3 py-3 text-white/30 group-hover:text-white/60 transition-colors select-none text-xs">
+                                <td className="pl-3 py-3 text-white/30 group-hover:text-[#C9A352] transition-colors select-none text-xs">
                                   {isOpen ? '▾' : '▸'}
                                 </td>
-                                <td className="px-3 py-3 text-white/55 tabular-nums font-mono text-sm">{r.year}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm" style={{ color: PALETTE.arka }}>{fmtUSD(r.arka)}</td>
+                                <td className="px-3 py-3 font-mono text-sm font-medium text-white/70">
+                                  {lang === 'es' ? `Año ${r.year}` : `Yr ${r.year}`}
+                                </td>
+                                <td className="px-3 py-3 tabular-nums font-medium text-sm" style={{ color: PALETTE.arka }}>{fmtUSD(r.arka)}</td>
                                 <td className="px-3 py-3 tabular-nums font-light text-sm text-emerald-400/80">{gain >= 0 ? '+' : ''}{fmtUSD(gain)}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-emerald-400/70">{retPct >= 0 ? '+' : ''}{retPct.toFixed(1)}%</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/55">{fmtUSD(r.sp500)}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/45">{fmtUSD(r.cetes)}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/35">{fmtUSD(r.bank)}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/30">{fmtUSD(r.contributed)}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-emerald-400/70">{retPct >= 0 ? '+' : ''}{retPct.toFixed(2)}%</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/50 border-l border-white/[0.04]">{fmtUSD(r.sp500)}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/40">{fmtUSD(r.cetes)}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/30">{fmtUSD(r.bank)}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/25">{fmtUSD(r.contributed)}</td>
                               </tr>
 
                               {/* ── Monthly detail ── */}
                               {isOpen && r.months.map((mo, mi) => {
-                                const moPrev  = mi === 0 ? prev : r.months[mi - 1]
-                                const moGain  = mo.arka - moPrev.arka - monthly
+                                const moPrev   = mi === 0 ? prev : r.months[mi - 1]
+                                const moGain   = mo.arka - moPrev.arka - monthly
                                 const moRetPct = moPrev.arka > 0 ? (moGain / moPrev.arka) * 100 : 0
                                 return (
                                   <tr key={`${r.year}-m${mo.month}`}
-                                    className="border-b border-white/[0.025] bg-white/[0.015]">
+                                    className={`border-b border-white/[0.025] ${mi % 2 === 0 ? 'bg-[#C9A352]/[0.02]' : 'bg-white/[0.015]'}`}>
                                     <td />
-                                    <td className="pl-6 pr-3 py-2 text-[10px] text-white/30 font-mono tracking-wider whitespace-nowrap">
-                                      └ {MONTHS[mi]}
+                                    <td className="pl-5 pr-3 py-2 whitespace-nowrap">
+                                      <div className="text-[10px] text-white/55 font-medium">{MONTHS[mi]}</div>
+                                      <div className="text-[9px] text-white/25 mt-0.5">{mo.days} {lang === 'es' ? 'días' : 'days'}{compound ? ` · ${mo.mRetPct.toFixed(3)}%` : ''}</div>
                                     </td>
                                     <td className="px-3 py-2 tabular-nums text-xs font-light" style={{ color: PALETTE.arka }}>{fmtUSD(mo.arka)}</td>
                                     <td className="px-3 py-2 tabular-nums text-xs font-light text-emerald-400/60">{moGain >= 0 ? '+' : ''}{fmtUSD(moGain)}</td>
                                     <td className="px-3 py-2 tabular-nums text-xs font-light text-emerald-400/55">{moRetPct >= 0 ? '+' : ''}{moRetPct.toFixed(2)}%</td>
-                                    <td className="px-3 py-2 tabular-nums text-xs text-white/40">{fmtUSD(mo.sp500)}</td>
+                                    <td className="px-3 py-2 tabular-nums text-xs text-white/40 border-l border-white/[0.04]">{fmtUSD(mo.sp500)}</td>
                                     <td className="px-3 py-2 tabular-nums text-xs text-white/35">{fmtUSD(mo.cetes)}</td>
                                     <td className="px-3 py-2 tabular-nums text-xs text-white/28">{fmtUSD(mo.bank)}</td>
                                     <td className="px-3 py-2 tabular-nums text-xs text-white/25">{fmtUSD(mo.contributed)}</td>
                                   </tr>
                                 )
                               })}
-                            </>
+                            </React.Fragment>
                           )
                         })}
                       </tbody>
