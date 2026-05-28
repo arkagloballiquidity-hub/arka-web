@@ -4,7 +4,7 @@ import { useLang } from '@/context/LanguageContext'
 
 // ── Rates & presets ──────────────────────────────────────────────────────────
 const RATES = { foundation: 0.18, growth: 0.24, alpha: 0.36 }
-const BENCH = { sp500: 0.10, cetes: 0.105, bank: 0.045 }
+const BENCH = { sp500: 0.108, cetes: 0.097, bank: 0.045 }
 
 const PRESETS = [
   { id: 'conservative', en: 'Conservative', es: 'Conservadora',  f: 100, g: 0,  a: 0  },
