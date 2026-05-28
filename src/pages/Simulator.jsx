@@ -21,10 +21,10 @@ function calcProjection({ initial, monthly, years, f, g, a, compound }) {
   const annual  = blended(f, g, a)
   const daily   = Math.pow(1 + annual, 1 / 365) - 1
   const mRate   = compound ? Math.pow(1 + daily, 365 / 12) - 1 : annual / 12
-  // Benchmarks always use standard compound (market convention — not affected by toggle)
-  const mSP    = Math.pow(1 + BENCH.sp500, 1 / 12) - 1
-  const mCetes = Math.pow(1 + BENCH.cetes, 1 / 12) - 1
-  const mBank  = Math.pow(1 + BENCH.bank,  1 / 12) - 1
+  // All instruments respect the compound toggle — consistent comparison
+  const mSP    = compound ? Math.pow(1 + BENCH.sp500, 1 / 12) - 1 : BENCH.sp500 / 12
+  const mCetes = compound ? Math.pow(1 + BENCH.cetes, 1 / 12) - 1 : BENCH.cetes / 12
+  const mBank  = compound ? Math.pow(1 + BENCH.bank,  1 / 12) - 1 : BENCH.bank  / 12
 
   let arka = initial, sp500 = initial, cetes = initial, bank = initial
   const rows = [{ year: 0, arka: initial, sp500: initial, cetes: initial, bank: initial, contributed: initial, months: [] }]
@@ -33,15 +33,17 @@ function calcProjection({ initial, monthly, years, f, g, a, compound }) {
   for (let y = 1; y <= years; y++) {
     const yearMonths = []
     for (let m = 0; m < 12; m++) {
-      // ARKA respects compound toggle; benchmarks always compound
       if (compound) {
-        arka = arka * (1 + mRate) + monthly
+        arka  = arka  * (1 + mRate)  + monthly
+        sp500 = sp500 * (1 + mSP)   + monthly
+        cetes = cetes * (1 + mCetes) + monthly
+        bank  = bank  * (1 + mBank)  + monthly
       } else {
-        arka += initial * mRate + monthly
+        arka  += initial * mRate  + monthly
+        sp500 += initial * mSP   + monthly
+        cetes += initial * mCetes + monthly
+        bank  += initial * mBank  + monthly
       }
-      sp500 = sp500 * (1 + mSP)   + monthly
-      cetes = cetes * (1 + mCetes) + monthly
-      bank  = bank  * (1 + mBank)  + monthly
       totalContrib += monthly
       yearMonths.push({
         month: m + 1,
