@@ -15,6 +15,7 @@ import LegalCenter from '@/pages/LegalCenter'
 import Contact from '@/pages/Contact'
 import Simulator from '@/pages/Simulator'
 import Profiler from '@/pages/Profiler'
+import ChatWidget from '@/components/shared/ChatWidget'
 
 const SEO_MAP = {
   '/': {
@@ -117,13 +118,12 @@ function SEOUpdater() {
 function Layout({ children, isHome }) {
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col">
-      {/* Header is always fixed, z-50, renders above everything */}
       <Header />
       <div className="flex-1">{children}</div>
-      {/* Footer below the video scroll on home; normal on other pages */}
       <div className="relative z-10">
         <Footer />
       </div>
+      <ChatWidget />
     </div>
   )
 }
