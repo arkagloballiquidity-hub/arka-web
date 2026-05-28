@@ -151,7 +151,7 @@ export default function ChatWidget() {
       <button
         onClick={() => setIsOpen(v => !v)}
         aria-label="ARKA Assistant"
-        className="fixed bottom-4 right-4 sm:right-6 z-[200] w-12 h-12 rounded-full border border-[#C9A352]/25 bg-[#0c0c0c] hover:border-[#C9A352]/55 hover:bg-[#C9A352]/6 transition-all duration-300 flex items-center justify-center shadow-lg shadow-black/50 group relative"
+        className="fixed bottom-4 right-4 sm:right-6 z-[200] w-12 h-12 rounded-full border border-[#C9A352]/25 bg-[#0c0c0c] hover:border-[#C9A352]/55 hover:bg-[#C9A352]/6 transition-all duration-300 flex items-center justify-center shadow-lg shadow-black/50 group"
       >
         {isOpen ? (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
