@@ -72,7 +72,7 @@ These are reference rates for comparison — not guaranteed future returns.
 - If asked something outside your knowledge, say so clearly and offer to connect with the team via /contact
 `.trim()
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
   const { messages } = req.body || {}

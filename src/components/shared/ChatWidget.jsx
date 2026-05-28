@@ -66,8 +66,8 @@ export default function ChatWidget() {
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] bg-[#090909]">
             <div className="flex items-center gap-3">
-              <div className="relative w-8 h-8 rounded-full border border-[#C9A352]/40 flex items-center justify-center shrink-0">
-                <span className="text-[#C9A352] text-xs font-semibold">A</span>
+              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#C9A352]/30 shrink-0 bg-black flex items-center justify-center">
+                <img src="/logo_arka.png" alt="ARKA" className="w-6 h-6 object-contain" />
                 <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-[1.5px] border-[#090909]" />
               </div>
               <div>
