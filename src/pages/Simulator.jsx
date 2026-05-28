@@ -629,13 +629,13 @@ export default function Simulator() {
                           <th className="w-7" />
                           {[
                             { label: tx.yr,                                       cls: 'text-white/40' },
+                            { label: lang === 'es' ? 'Aportado' : 'Invested',     cls: 'text-white/35' },
                             { label: 'ARKA',                                      cls: '',  style: { color: PALETTE.arka + 'bb' } },
                             { label: lang === 'es' ? 'Ganancia año' : 'Yr. gain', cls: 'text-white/35' },
                             { label: 'Ret. %',                                    cls: 'text-white/35' },
                             { label: 'S&P 500',                                   cls: 'text-white/22' },
                             { label: 'CETES',                                     cls: 'text-white/22' },
                             { label: lang === 'es' ? 'Banca' : 'Banking',         cls: 'text-white/22' },
-                            { label: lang === 'es' ? 'Aportado' : 'Invested',     cls: 'text-white/22' },
                           ].map(({ label, cls, style }) => (
                             <th key={label} style={style}
                               className={`px-4 py-3.5 text-left text-[10px] tracking-[0.18em] uppercase font-normal whitespace-nowrap ${cls}`}>
@@ -664,13 +664,13 @@ export default function Simulator() {
                                   {isOpen ? '▾' : '▸'}
                                 </td>
                                 <td className="px-4 py-3.5 text-white/45 tabular-nums font-mono text-sm">{r.year}</td>
+                                <td className="px-4 py-3.5 tabular-nums text-sm text-white/35">{fmtUSD(r.contributed)}</td>
                                 <td className="px-4 py-3.5 tabular-nums font-medium text-sm" style={{ color: PALETTE.arka }}>{fmtUSD(r.arka)}</td>
                                 <td className="px-4 py-3.5 tabular-nums text-sm text-white/60">{gain >= 0 ? '+' : ''}{fmtUSD(gain)}</td>
                                 <td className="px-4 py-3.5 tabular-nums text-sm text-white/60">{retPct >= 0 ? '+' : ''}{retPct.toFixed(1)}%</td>
                                 <td className="px-4 py-3.5 tabular-nums text-sm text-white/30">{fmtUSD(r.sp500)}</td>
                                 <td className="px-4 py-3.5 tabular-nums text-sm text-white/25">{fmtUSD(r.cetes)}</td>
                                 <td className="px-4 py-3.5 tabular-nums text-sm text-white/20">{fmtUSD(r.bank)}</td>
-                                <td className="px-4 py-3.5 tabular-nums text-sm text-white/20">{fmtUSD(r.contributed)}</td>
                               </tr>
 
                               {/* ── Monthly detail ── */}
@@ -688,13 +688,13 @@ export default function Simulator() {
                                         <span className="text-white/18 ml-2 text-[9px]">{mo.days}d</span>
                                       )}
                                     </td>
+                                    <td className="px-4 py-2.5 tabular-nums text-xs text-white/25">{fmtUSD(mo.contributed)}</td>
                                     <td className="px-4 py-2.5 tabular-nums text-xs" style={{ color: PALETTE.arka + 'cc' }}>{fmtUSD(mo.arka)}</td>
                                     <td className="px-4 py-2.5 tabular-nums text-xs text-white/40">{moGain >= 0 ? '+' : ''}{fmtUSD(moGain)}</td>
                                     <td className="px-4 py-2.5 tabular-nums text-xs text-white/40">{moRetPct >= 0 ? '+' : ''}{moRetPct.toFixed(2)}%</td>
                                     <td className="px-4 py-2.5 tabular-nums text-xs text-white/20">{fmtUSD(mo.sp500)}</td>
                                     <td className="px-4 py-2.5 tabular-nums text-xs text-white/18">{fmtUSD(mo.cetes)}</td>
                                     <td className="px-4 py-2.5 tabular-nums text-xs text-white/15">{fmtUSD(mo.bank)}</td>
-                                    <td className="px-4 py-2.5 tabular-nums text-xs text-white/15">{fmtUSD(mo.contributed)}</td>
                                   </tr>
                                 )
                               })}
