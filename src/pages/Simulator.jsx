@@ -623,65 +623,25 @@ export default function Simulator() {
 
                 {showTable && (
                   <div className="overflow-x-auto rounded-xl border border-white/8">
-                    <table className="w-full min-w-[780px]">
+                    <table className="w-full min-w-[740px]">
                       <thead>
-                        {/* ── Group labels ── */}
-                        <tr className="border-b border-white/[0.04]">
-                          <th colSpan={2} />
-                          <th colSpan={3} className="px-3 pt-3 pb-1 text-left">
-                            <span className="text-[9px] tracking-[0.25em] uppercase font-normal" style={{ color: PALETTE.arka + 'aa' }}>
-                              ── ARKA
-                            </span>
-                          </th>
-                          <th colSpan={3} className="px-3 pt-3 pb-1 text-left border-l border-white/[0.05]">
-                            <span className="text-[9px] tracking-[0.25em] uppercase text-white/25 font-normal">
-                              ── {lang === 'es' ? 'Benchmarks de Mercado' : 'Market Benchmarks'}
-                            </span>
-                          </th>
-                          <th />
-                        </tr>
-                        {/* ── Column headers ── */}
-                        <tr className="border-b border-white/8">
-                          <th className="w-8" />
-                          {/* Año */}
-                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
-                            <div className="text-[10px] tracking-[0.2em] uppercase text-white/50">{tx.yr}</div>
-                          </th>
-                          {/* ARKA Capital */}
-                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
-                            <div className="text-[10px] tracking-[0.18em] uppercase" style={{ color: PALETTE.arka }}>ARKA</div>
-                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Capital acumulado' : 'Accumulated capital'}</div>
-                          </th>
-                          {/* Ganancia */}
-                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
-                            <div className="text-[10px] tracking-[0.18em] uppercase text-emerald-400/70">{lang === 'es' ? 'Ganancia' : 'Gain'}</div>
-                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Neto de aportaciones' : 'Net of contributions'}</div>
-                          </th>
-                          {/* Rendimiento % */}
-                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
-                            <div className="text-[10px] tracking-[0.18em] uppercase text-emerald-400/60">Ret. %</div>
-                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Rendimiento real' : 'Actual return'}</div>
-                          </th>
-                          {/* S&P 500 */}
-                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap border-l border-white/[0.05]">
-                            <div className="text-[10px] tracking-[0.18em] uppercase" style={{ color: PALETTE.sp500 }}>S&P 500</div>
-                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Acumulado ~10.8%/yr' : 'Accumulated ~10.8%/yr'}</div>
-                          </th>
-                          {/* CETES */}
-                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
-                            <div className="text-[10px] tracking-[0.18em] uppercase" style={{ color: PALETTE.cetes }}>CETES</div>
-                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Acumulado ~9.7%/yr' : 'Accumulated ~9.7%/yr'}</div>
-                          </th>
-                          {/* Banca */}
-                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
-                            <div className="text-[10px] tracking-[0.18em] uppercase" style={{ color: PALETTE.bank }}>{lang === 'es' ? 'Banca' : 'Banking'}</div>
-                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Acumulado ~4.5%/yr' : 'Accumulated ~4.5%/yr'}</div>
-                          </th>
-                          {/* Aportado */}
-                          <th className="px-3 py-2.5 text-left font-normal whitespace-nowrap">
-                            <div className="text-[10px] tracking-[0.18em] uppercase text-white/40">{tx.contributed}</div>
-                            <div className="text-[9px] text-white/28 normal-case tracking-normal mt-0.5">{lang === 'es' ? 'Total invertido' : 'Total invested'}</div>
-                          </th>
+                        <tr className="border-b border-white/[0.06]">
+                          <th className="w-7" />
+                          {[
+                            { label: tx.yr,                                       cls: 'text-white/40' },
+                            { label: 'ARKA',                                      cls: '',  style: { color: PALETTE.arka + 'bb' } },
+                            { label: lang === 'es' ? 'Ganancia año' : 'Yr. gain', cls: 'text-white/35' },
+                            { label: 'Ret. %',                                    cls: 'text-white/35' },
+                            { label: 'S&P 500',                                   cls: 'text-white/22' },
+                            { label: 'CETES',                                     cls: 'text-white/22' },
+                            { label: lang === 'es' ? 'Banca' : 'Banking',         cls: 'text-white/22' },
+                            { label: lang === 'es' ? 'Aportado' : 'Invested',     cls: 'text-white/22' },
+                          ].map(({ label, cls, style }) => (
+                            <th key={label} style={style}
+                              className={`px-4 py-3.5 text-left text-[10px] tracking-[0.18em] uppercase font-normal whitespace-nowrap ${cls}`}>
+                              {label}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
@@ -691,29 +651,26 @@ export default function Simulator() {
                           const retPct = prev.arka > 0 ? (gain / prev.arka) * 100 : 0
                           const isOpen = expandedYear === r.year
                           const MONTHS = lang === 'es'
-                            ? ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-                            : ['January','February','March','April','May','June','July','August','September','October','November','December']
-                          const isEven = idx % 2 === 0
+                            ? ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+                            : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
                           return (
                             <React.Fragment key={r.year}>
                               {/* ── Year row ── */}
                               <tr
                                 onClick={() => setExpandedYear(isOpen ? null : r.year)}
-                                className={`border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors cursor-pointer group ${isEven ? 'bg-white/[0.01]' : ''}`}
+                                className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors cursor-pointer group"
                               >
-                                <td className="pl-3 py-3 text-white/30 group-hover:text-[#C9A352] transition-colors select-none text-xs">
+                                <td className="pl-3 text-white/20 group-hover:text-[#C9A352]/70 transition-colors select-none text-[10px]">
                                   {isOpen ? '▾' : '▸'}
                                 </td>
-                                <td className="px-3 py-3 font-mono text-sm font-medium text-white/70">
-                                  {lang === 'es' ? `Año ${r.year}` : `Yr ${r.year}`}
-                                </td>
-                                <td className="px-3 py-3 tabular-nums font-medium text-sm" style={{ color: PALETTE.arka }}>{fmtUSD(r.arka)}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-emerald-400/80">{gain >= 0 ? '+' : ''}{fmtUSD(gain)}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-emerald-400/70">{retPct >= 0 ? '+' : ''}{retPct.toFixed(2)}%</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/50 border-l border-white/[0.04]">{fmtUSD(r.sp500)}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/40">{fmtUSD(r.cetes)}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/30">{fmtUSD(r.bank)}</td>
-                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/25">{fmtUSD(r.contributed)}</td>
+                                <td className="px-4 py-3.5 text-white/45 tabular-nums font-mono text-sm">{r.year}</td>
+                                <td className="px-4 py-3.5 tabular-nums font-medium text-sm" style={{ color: PALETTE.arka }}>{fmtUSD(r.arka)}</td>
+                                <td className="px-4 py-3.5 tabular-nums text-sm text-white/60">{gain >= 0 ? '+' : ''}{fmtUSD(gain)}</td>
+                                <td className="px-4 py-3.5 tabular-nums text-sm text-white/60">{retPct >= 0 ? '+' : ''}{retPct.toFixed(1)}%</td>
+                                <td className="px-4 py-3.5 tabular-nums text-sm text-white/30">{fmtUSD(r.sp500)}</td>
+                                <td className="px-4 py-3.5 tabular-nums text-sm text-white/25">{fmtUSD(r.cetes)}</td>
+                                <td className="px-4 py-3.5 tabular-nums text-sm text-white/20">{fmtUSD(r.bank)}</td>
+                                <td className="px-4 py-3.5 tabular-nums text-sm text-white/20">{fmtUSD(r.contributed)}</td>
                               </tr>
 
                               {/* ── Monthly detail ── */}
@@ -723,19 +680,21 @@ export default function Simulator() {
                                 const moRetPct = moPrev.arka > 0 ? (moGain / moPrev.arka) * 100 : 0
                                 return (
                                   <tr key={`${r.year}-m${mo.month}`}
-                                    className={`border-b border-white/[0.025] ${mi % 2 === 0 ? 'bg-[#C9A352]/[0.02]' : 'bg-white/[0.015]'}`}>
+                                    className="border-b border-white/[0.02] bg-white/[0.012]">
                                     <td />
-                                    <td className="pl-5 pr-3 py-2 whitespace-nowrap">
-                                      <div className="text-[10px] text-white/55 font-medium">{MONTHS[mi]}</div>
-                                      <div className="text-[9px] text-white/25 mt-0.5">{mo.days} {lang === 'es' ? 'días' : 'days'}{compound ? ` · ${mo.mRetPct.toFixed(3)}%` : ''}</div>
+                                    <td className="pl-7 pr-4 py-2.5 text-[11px] text-white/35 whitespace-nowrap">
+                                      {MONTHS[mi]}
+                                      {compound && (
+                                        <span className="text-white/18 ml-2 text-[9px]">{mo.days}d</span>
+                                      )}
                                     </td>
-                                    <td className="px-3 py-2 tabular-nums text-xs font-light" style={{ color: PALETTE.arka }}>{fmtUSD(mo.arka)}</td>
-                                    <td className="px-3 py-2 tabular-nums text-xs font-light text-emerald-400/60">{moGain >= 0 ? '+' : ''}{fmtUSD(moGain)}</td>
-                                    <td className="px-3 py-2 tabular-nums text-xs font-light text-emerald-400/55">{moRetPct >= 0 ? '+' : ''}{moRetPct.toFixed(2)}%</td>
-                                    <td className="px-3 py-2 tabular-nums text-xs text-white/40 border-l border-white/[0.04]">{fmtUSD(mo.sp500)}</td>
-                                    <td className="px-3 py-2 tabular-nums text-xs text-white/35">{fmtUSD(mo.cetes)}</td>
-                                    <td className="px-3 py-2 tabular-nums text-xs text-white/28">{fmtUSD(mo.bank)}</td>
-                                    <td className="px-3 py-2 tabular-nums text-xs text-white/25">{fmtUSD(mo.contributed)}</td>
+                                    <td className="px-4 py-2.5 tabular-nums text-xs" style={{ color: PALETTE.arka + 'cc' }}>{fmtUSD(mo.arka)}</td>
+                                    <td className="px-4 py-2.5 tabular-nums text-xs text-white/40">{moGain >= 0 ? '+' : ''}{fmtUSD(moGain)}</td>
+                                    <td className="px-4 py-2.5 tabular-nums text-xs text-white/40">{moRetPct >= 0 ? '+' : ''}{moRetPct.toFixed(2)}%</td>
+                                    <td className="px-4 py-2.5 tabular-nums text-xs text-white/20">{fmtUSD(mo.sp500)}</td>
+                                    <td className="px-4 py-2.5 tabular-nums text-xs text-white/18">{fmtUSD(mo.cetes)}</td>
+                                    <td className="px-4 py-2.5 tabular-nums text-xs text-white/15">{fmtUSD(mo.bank)}</td>
+                                    <td className="px-4 py-2.5 tabular-nums text-xs text-white/15">{fmtUSD(mo.contributed)}</td>
                                   </tr>
                                 )
                               })}
