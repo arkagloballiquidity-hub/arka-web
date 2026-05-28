@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLang } from '@/context/LanguageContext'
 
@@ -216,6 +216,7 @@ function GradientText({ children, gradient, className = '' }) {
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Profiler() {
   const { lang } = useLang()
+  const navigate = useNavigate()
   const [step, setStep]         = useState(0)
   const [answers, setAnswers]   = useState({})
   const [selected, setSelected] = useState(null)
@@ -246,6 +247,18 @@ export default function Profiler() {
       if (step < 10) go(step + 1, 1)
       else go(11, 1)
     }, 380)
+  }
+
+  const runSimulator = () => {
+    try {
+      sessionStorage.setItem('arka_profiler_alloc', JSON.stringify({
+        f:  profile.alloc.foundation,
+        g:  profile.alloc.growth,
+        a:  profile.alloc.alpha,
+        id: profile.id,
+      }))
+    } catch {}
+    navigate('/simulator')
   }
 
   const restart = () => {
@@ -570,10 +583,10 @@ export default function Profiler() {
 
                 {/* CTAs */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <Link to="/simulator"
+                  <button onClick={runSimulator}
                     className="inline-flex items-center justify-center gap-2 text-[11px] tracking-[0.22em] uppercase font-medium bg-[#004C45] text-white hover:bg-[#005c54] px-8 py-4 rounded-sm transition-all duration-300">
                     {tx.simulate}
-                  </Link>
+                  </button>
                   <Link to="/access"
                     className="inline-flex items-center justify-center gap-2 text-[11px] tracking-[0.22em] uppercase font-medium border border-white/18 text-white/65 hover:border-white/40 hover:text-white px-8 py-4 rounded-sm transition-all duration-300">
                     {tx.apply}

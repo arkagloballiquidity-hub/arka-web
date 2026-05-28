@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useLang } from '@/context/LanguageContext'
 
@@ -21,9 +21,10 @@ function calcProjection({ initial, monthly, years, f, g, a, compound }) {
   const annual  = blended(f, g, a)
   const daily   = Math.pow(1 + annual, 1 / 365) - 1
   const mRate   = compound ? Math.pow(1 + daily, 365 / 12) - 1 : annual / 12
-  const mSP     = compound ? Math.pow(1 + BENCH.sp500,  1 / 12) - 1 : BENCH.sp500 / 12
-  const mCetes  = compound ? Math.pow(1 + BENCH.cetes,  1 / 12) - 1 : BENCH.cetes / 12
-  const mBank   = compound ? Math.pow(1 + BENCH.bank,   1 / 12) - 1 : BENCH.bank  / 12
+  // Benchmarks always use standard compound (market convention — not affected by toggle)
+  const mSP    = Math.pow(1 + BENCH.sp500, 1 / 12) - 1
+  const mCetes = Math.pow(1 + BENCH.cetes, 1 / 12) - 1
+  const mBank  = Math.pow(1 + BENCH.bank,  1 / 12) - 1
 
   let arka = initial, sp500 = initial, cetes = initial, bank = initial
   const rows = [{ year: 0, arka: initial, sp500: initial, cetes: initial, bank: initial, contributed: initial }]
@@ -31,17 +32,15 @@ function calcProjection({ initial, monthly, years, f, g, a, compound }) {
 
   for (let y = 1; y <= years; y++) {
     for (let m = 0; m < 12; m++) {
+      // ARKA respects compound toggle; benchmarks always compound
       if (compound) {
-        arka  = arka  * (1 + mRate)  + monthly
-        sp500 = sp500 * (1 + mSP)   + monthly
-        cetes = cetes * (1 + mCetes) + monthly
-        bank  = bank  * (1 + mBank)  + monthly
+        arka = arka * (1 + mRate) + monthly
       } else {
-        arka  += initial * mRate  + monthly
-        sp500 += initial * mSP   + monthly
-        cetes += initial * mCetes + monthly
-        bank  += initial * mBank  + monthly
+        arka += initial * mRate + monthly
       }
+      sp500 = sp500 * (1 + mSP)   + monthly
+      cetes = cetes * (1 + mCetes) + monthly
+      bank  = bank  * (1 + mBank)  + monthly
       totalContrib += monthly
     }
     rows.push({
@@ -158,14 +157,45 @@ function LineChart({ rows }) {
   )
 }
 
-// ── Slider ───────────────────────────────────────────────────────────────────
+// ── Slider (with typeable value) ─────────────────────────────────────────────
 function Slider({ label, value, min, max, step, onChange, fmt }) {
   const sliderId = `slider-${label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`
+  const [editing, setEditing] = useState(false)
+  const [raw, setRaw]         = useState('')
+
+  const commit = (str) => {
+    const n = parseFloat(String(str).replace(/[^0-9.]/g, ''))
+    if (!isNaN(n)) {
+      const clamped = Math.min(max, Math.max(min, Math.round(n / step) * step))
+      onChange(clamped)
+    }
+    setEditing(false)
+  }
+
   return (
     <div className="space-y-2.5">
-      <div className="flex justify-between items-baseline">
-        <label htmlFor={sliderId} className="text-[10px] tracking-[0.28em] uppercase text-white/55">{label}</label>
-        <span className="text-white text-base font-light tabular-nums">{fmt ? fmt(value) : value}</span>
+      <div className="flex justify-between items-baseline gap-3">
+        <label htmlFor={sliderId} className="text-[10px] tracking-[0.28em] uppercase text-white/55 shrink-0">{label}</label>
+        {editing ? (
+          <input
+            type="text"
+            autoFocus
+            value={raw}
+            onChange={e => setRaw(e.target.value)}
+            onBlur={() => commit(raw)}
+            onKeyDown={e => { if (e.key === 'Enter') commit(raw); if (e.key === 'Escape') setEditing(false) }}
+            className="text-white text-base font-light tabular-nums bg-transparent border-b border-[#C9A352]/70 outline-none text-right w-28"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setRaw(String(value)); setEditing(true) }}
+            title={fmt ? 'Click to type a value' : undefined}
+            className="text-white text-base font-light tabular-nums hover:text-[#C9A352] transition-colors duration-150 cursor-text text-right"
+          >
+            {fmt ? fmt(value) : value}
+          </button>
+        )}
       </div>
       <input
         id={sliderId} name={sliderId}
@@ -230,6 +260,19 @@ export default function Simulator() {
   const [senderName,  setSenderName]  = useState('')
   const [senderEmail, setSenderEmail] = useState('')
   const [sendStatus,  setSendStatus]  = useState('idle') // idle | sending | sent | error
+
+  // Load profiler allocation if coming from Profiler page
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('arka_profiler_alloc')
+      if (saved) {
+        const { f: pf, g: pg, a: pa, id } = JSON.parse(saved)
+        setF(pf); setG(pg); setA(pa)
+        setPreset(id || 'custom')
+        sessionStorage.removeItem('arka_profiler_alloc')
+      }
+    } catch {}
+  }, [])
 
   const applyPreset = (p) => {
     const found = PRESETS.find(x => x.id === p)
@@ -517,16 +560,19 @@ export default function Simulator() {
               <div className="rounded-xl border border-white/8 bg-white/[0.03] p-5 space-y-4">
                 <p className="text-[10px] tracking-[0.28em] uppercase text-white/55 mb-5">{tx.vs}</p>
                 {[
-                  { label: 'ARKA',    value: finalRow.arka,  color: PALETTE.arka  },
-                  { label: 'S&P 500', value: finalRow.sp500, color: PALETTE.sp500 },
-                  { label: 'CETES',   value: finalRow.cetes, color: PALETTE.cetes },
-                  { label: lang === 'es' ? 'Banca' : 'Banking', value: finalRow.bank, color: PALETTE.bank },
-                ].map(({ label, value, color }) => {
+                  { label: 'ARKA',    value: finalRow.arka,  color: PALETTE.arka,  rate: pct(annual) },
+                  { label: 'S&P 500', value: finalRow.sp500, color: PALETTE.sp500, rate: `${(BENCH.sp500 * 100).toFixed(1)}% / yr` },
+                  { label: 'CETES',   value: finalRow.cetes, color: PALETTE.cetes, rate: `${(BENCH.cetes * 100).toFixed(1)}% / yr` },
+                  { label: lang === 'es' ? 'Banca Trad.' : 'Trad. Banking', value: finalRow.bank, color: PALETTE.bank, rate: `${(BENCH.bank * 100).toFixed(1)}% / yr` },
+                ].map(({ label, value, color, rate }) => {
                   const pctW = Math.round((value / finalRow.arka) * 100)
                   return (
                     <div key={label} className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-[10px] tracking-wide font-medium" style={{ color }}>{label}</span>
+                      <div className="flex justify-between items-baseline">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-[10px] tracking-wide font-medium" style={{ color }}>{label}</span>
+                          <span className="text-[9px] text-white/35 tabular-nums">{rate}</span>
+                        </div>
                         <span className="text-white/70 tabular-nums text-[10px]">{fmtUSD(value)}</span>
                       </div>
                       <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
