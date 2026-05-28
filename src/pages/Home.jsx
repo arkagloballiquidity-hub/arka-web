@@ -229,7 +229,7 @@ export default function Home() {
         playsInline
         preload="auto"
         className="fixed inset-0 w-full h-full object-cover"
-        style={{ zIndex: 0 }}
+        style={{ zIndex: 0, objectPosition: 'center 30%' }}
       />
 
       {/* Fixed dark overlays — ensure text readability throughout */}
