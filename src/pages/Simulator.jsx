@@ -27,10 +27,11 @@ function calcProjection({ initial, monthly, years, f, g, a, compound }) {
   const mBank  = Math.pow(1 + BENCH.bank,  1 / 12) - 1
 
   let arka = initial, sp500 = initial, cetes = initial, bank = initial
-  const rows = [{ year: 0, arka: initial, sp500: initial, cetes: initial, bank: initial, contributed: initial }]
+  const rows = [{ year: 0, arka: initial, sp500: initial, cetes: initial, bank: initial, contributed: initial, months: [] }]
   let totalContrib = initial
 
   for (let y = 1; y <= years; y++) {
+    const yearMonths = []
     for (let m = 0; m < 12; m++) {
       // ARKA respects compound toggle; benchmarks always compound
       if (compound) {
@@ -42,6 +43,14 @@ function calcProjection({ initial, monthly, years, f, g, a, compound }) {
       cetes = cetes * (1 + mCetes) + monthly
       bank  = bank  * (1 + mBank)  + monthly
       totalContrib += monthly
+      yearMonths.push({
+        month: m + 1,
+        arka:  Math.round(arka),
+        sp500: Math.round(sp500),
+        cetes: Math.round(cetes),
+        bank:  Math.round(bank),
+        contributed: Math.round(totalContrib),
+      })
     }
     rows.push({
       year: y,
@@ -50,6 +59,7 @@ function calcProjection({ initial, monthly, years, f, g, a, compound }) {
       cetes: Math.round(cetes),
       bank:  Math.round(bank),
       contributed: Math.round(totalContrib),
+      months: yearMonths,
     })
   }
   return { rows, annual, mRate }
@@ -254,7 +264,8 @@ export default function Simulator() {
   const [f, setF] = useState(50)
   const [g, setG] = useState(35)
   const [a, setA] = useState(15)
-  const [showTable, setShowTable] = useState(false)
+  const [showTable,    setShowTable]    = useState(false)
+  const [expandedYear, setExpandedYear] = useState(null)
 
   // Email send
   const [senderName,  setSenderName]  = useState('')
@@ -593,25 +604,81 @@ export default function Simulator() {
 
                 {showTable && (
                   <div className="overflow-x-auto rounded-xl border border-white/8">
-                    <table className="w-full">
+                    <table className="w-full min-w-[700px]">
                       <thead>
                         <tr className="border-b border-white/8">
-                          {[tx.yr, 'ARKA', 'S&P 500', 'CETES', lang === 'es' ? 'Banca' : 'Banking', tx.contributed].map(h => (
-                            <th key={h} className="px-4 py-3 text-left text-[10px] tracking-[0.2em] uppercase text-white/45 font-normal whitespace-nowrap">{h}</th>
+                          {/* expand toggle col */}
+                          <th className="w-8" />
+                          {[
+                            tx.yr,
+                            'ARKA',
+                            lang === 'es' ? 'Ganancia' : 'Gain',
+                            'Ret. %',
+                            'S&P 500',
+                            'CETES',
+                            lang === 'es' ? 'Banca' : 'Banking',
+                            tx.contributed,
+                          ].map(h => (
+                            <th key={h} className="px-3 py-3 text-left text-[10px] tracking-[0.18em] uppercase text-white/45 font-normal whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {rows.slice(1).map(r => (
-                          <tr key={r.year} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                            <td className="px-4 py-3 text-white/55 tabular-nums font-mono text-sm">{r.year}</td>
-                            <td className="px-4 py-3 tabular-nums font-light text-sm" style={{ color: PALETTE.arka }}>{fmtUSD(r.arka)}</td>
-                            <td className="px-4 py-3 tabular-nums font-light text-sm text-white/55">{fmtUSD(r.sp500)}</td>
-                            <td className="px-4 py-3 tabular-nums font-light text-sm text-white/45">{fmtUSD(r.cetes)}</td>
-                            <td className="px-4 py-3 tabular-nums font-light text-sm text-white/35">{fmtUSD(r.bank)}</td>
-                            <td className="px-4 py-3 tabular-nums font-light text-sm text-white/35">{fmtUSD(r.contributed)}</td>
-                          </tr>
-                        ))}
+                        {rows.slice(1).map((r, idx) => {
+                          const prev    = rows[idx]           // row before this one (year - 1)
+                          const gain    = r.arka - prev.arka - (monthly * 12)
+                          const retPct  = prev.arka > 0 ? (gain / prev.arka) * 100 : 0
+                          const isOpen  = expandedYear === r.year
+                          const MONTHS  = lang === 'es'
+                            ? ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+                            : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                          return (
+                            <>
+                              {/* ── Year row ── */}
+                              <tr
+                                key={r.year}
+                                onClick={() => setExpandedYear(isOpen ? null : r.year)}
+                                className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors cursor-pointer group"
+                              >
+                                {/* chevron */}
+                                <td className="pl-3 py-3 text-white/30 group-hover:text-white/60 transition-colors select-none text-xs">
+                                  {isOpen ? '▾' : '▸'}
+                                </td>
+                                <td className="px-3 py-3 text-white/55 tabular-nums font-mono text-sm">{r.year}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm" style={{ color: PALETTE.arka }}>{fmtUSD(r.arka)}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-emerald-400/80">{gain >= 0 ? '+' : ''}{fmtUSD(gain)}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-emerald-400/70">{retPct >= 0 ? '+' : ''}{retPct.toFixed(1)}%</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/55">{fmtUSD(r.sp500)}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/45">{fmtUSD(r.cetes)}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/35">{fmtUSD(r.bank)}</td>
+                                <td className="px-3 py-3 tabular-nums font-light text-sm text-white/30">{fmtUSD(r.contributed)}</td>
+                              </tr>
+
+                              {/* ── Monthly detail ── */}
+                              {isOpen && r.months.map((mo, mi) => {
+                                const moPrev  = mi === 0 ? prev : r.months[mi - 1]
+                                const moGain  = mo.arka - moPrev.arka - monthly
+                                const moRetPct = moPrev.arka > 0 ? (moGain / moPrev.arka) * 100 : 0
+                                return (
+                                  <tr key={`${r.year}-m${mo.month}`}
+                                    className="border-b border-white/[0.025] bg-white/[0.015]">
+                                    <td />
+                                    <td className="pl-6 pr-3 py-2 text-[10px] text-white/30 font-mono tracking-wider whitespace-nowrap">
+                                      └ {MONTHS[mi]}
+                                    </td>
+                                    <td className="px-3 py-2 tabular-nums text-xs font-light" style={{ color: PALETTE.arka }}>{fmtUSD(mo.arka)}</td>
+                                    <td className="px-3 py-2 tabular-nums text-xs font-light text-emerald-400/60">{moGain >= 0 ? '+' : ''}{fmtUSD(moGain)}</td>
+                                    <td className="px-3 py-2 tabular-nums text-xs font-light text-emerald-400/55">{moRetPct >= 0 ? '+' : ''}{moRetPct.toFixed(2)}%</td>
+                                    <td className="px-3 py-2 tabular-nums text-xs text-white/40">{fmtUSD(mo.sp500)}</td>
+                                    <td className="px-3 py-2 tabular-nums text-xs text-white/35">{fmtUSD(mo.cetes)}</td>
+                                    <td className="px-3 py-2 tabular-nums text-xs text-white/28">{fmtUSD(mo.bank)}</td>
+                                    <td className="px-3 py-2 tabular-nums text-xs text-white/25">{fmtUSD(mo.contributed)}</td>
+                                  </tr>
+                                )
+                              })}
+                            </>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
