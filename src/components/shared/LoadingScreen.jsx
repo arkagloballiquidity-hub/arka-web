@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 
 export default function LoadingScreen({ onDone }) {
-  const [phase, setPhase] = useState('in') // 'in' | 'hold' | 'out'
+  const [phase, setPhase] = useState('in') // 'in' | 'visible' | 'out'
 
   useEffect(() => {
-    // fade in → hold → fade out
-    const holdTimer = setTimeout(() => setPhase('out'), 1400)
-    const doneTimer = setTimeout(() => onDone(), 2000)
-    return () => { clearTimeout(holdTimer); clearTimeout(doneTimer) }
+    const visibleTimer = setTimeout(() => setPhase('visible'), 50)
+    const outTimer    = setTimeout(() => setPhase('out'), 1500)
+    const doneTimer   = setTimeout(() => onDone(), 2100)
+    return () => { clearTimeout(visibleTimer); clearTimeout(outTimer); clearTimeout(doneTimer) }
   }, [onDone])
 
   return (
@@ -15,38 +15,41 @@ export default function LoadingScreen({ onDone }) {
       className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050505]"
       style={{
         opacity: phase === 'out' ? 0 : 1,
-        transition: phase === 'out' ? 'opacity 0.6s ease' : 'opacity 0.4s ease',
+        transition: phase === 'out' ? 'opacity 0.6s ease' : 'none',
+        pointerEvents: phase === 'out' ? 'none' : 'all',
       }}
     >
-      {/* Logo */}
+      {/* Logo + texto */}
       <div
+        className="flex flex-col items-center gap-5"
         style={{
           opacity: phase === 'in' ? 0 : 1,
-          transform: phase === 'in' ? 'translateY(8px)' : 'translateY(0)',
-          transition: 'opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s',
+          transform: phase === 'in' ? 'translateY(10px)' : 'translateY(0)',
+          transition: 'opacity 0.5s ease, transform 0.5s ease',
         }}
-        className="flex flex-col items-center gap-3"
       >
         <img
           src="/logo_arka.png"
           alt="ARKA"
-          className="w-14 h-14 object-contain"
+          className="w-16 h-16 object-contain"
         />
-        <div className="text-center">
-          <p className="text-white text-sm font-semibold tracking-[0.35em] uppercase">ARKA</p>
-          <p className="text-[#94A3B8] text-[9px] tracking-[0.4em] uppercase mt-0.5">Global Investments</p>
-        </div>
+        <p
+          style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.25em' }}
+          className="text-white text-sm font-semibold uppercase tracking-widest"
+        >
+          ARKA GLOBAL INVESTMENTS
+        </p>
       </div>
 
-      {/* Thin progress line */}
-      <div className="absolute bottom-0 left-0 h-[1px] bg-[#C9A352]/40"
+      {/* Barra de progreso dorada */}
+      <div className="absolute bottom-0 left-0 h-[1px] bg-[#C9A352]/50"
         style={{
-          width: phase === 'in' ? '0%' : phase === 'hold' ? '75%' : '100%',
+          width: phase === 'in' ? '0%' : phase === 'visible' ? '80%' : '100%',
           transition: phase === 'in'
-            ? 'width 0.5s ease'
-            : phase === 'hold'
-            ? 'width 0.9s ease'
-            : 'width 0.5s ease',
+            ? 'none'
+            : phase === 'visible'
+            ? 'width 1.4s cubic-bezier(0.4,0,0.2,1)'
+            : 'width 0.4s ease',
         }}
       />
     </div>
