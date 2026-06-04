@@ -38,7 +38,7 @@ export default function LoadingScreen({ onDone }) {
           style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.3em' }}
           className="text-white text-2xl font-semibold uppercase"
         >
-          ARKA GLOBAL INVESTMENTS
+          GLOBAL INVESTMENTS
         </p>
       </div>
 
