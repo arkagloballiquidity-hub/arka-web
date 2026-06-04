@@ -1,6 +1,75 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLang } from '@/context/LanguageContext'
 
+function renderMarkdown(text) {
+  const lines = text.split('\n')
+  const elements = []
+  let i = 0
+
+  while (i < lines.length) {
+    const line = lines[i]
+
+    if (!line.trim()) { i++; continue }
+
+    // Numbered list item
+    const numMatch = line.match(/^(\d+)\.\s+\*\*(.+?)\*\*[:\s]*(.*)$/)
+    if (numMatch) {
+      const [, num, bold, rest] = numMatch
+      // Collect sub-lines (indented or continuation)
+      const subLines = []
+      let j = i + 1
+      while (j < lines.length && lines[j].trim() && !lines[j].match(/^\d+\./)) {
+        subLines.push(lines[j].trim())
+        j++
+      }
+      elements.push(
+        <div key={i} className="flex gap-2.5 mt-2">
+          <span className="text-[#C9A352]/60 font-medium shrink-0 text-[11px] mt-0.5">{num}.</span>
+          <div>
+            <span className="text-white/90 font-medium text-[12px]">{bold}</span>
+            {rest && <span className="text-white/60 text-[12px]">: {rest}</span>}
+            {subLines.map((s, k) => (
+              <p key={k} className="text-white/55 text-[11px] leading-relaxed mt-0.5">{inlineMarkdown(s)}</p>
+            ))}
+          </div>
+        </div>
+      )
+      i = j
+      continue
+    }
+
+    // Bullet list
+    const bulletMatch = line.match(/^[-*]\s+(.+)$/)
+    if (bulletMatch) {
+      elements.push(
+        <div key={i} className="flex gap-2 mt-1.5">
+          <span className="text-[#C9A352]/50 shrink-0 mt-1">·</span>
+          <span className="text-white/70 text-[12px] leading-relaxed">{inlineMarkdown(bulletMatch[1])}</span>
+        </div>
+      )
+      i++; continue
+    }
+
+    // Normal paragraph
+    elements.push(
+      <p key={i} className={`text-[13px] leading-relaxed ${elements.length > 0 ? 'mt-2' : ''}`}>
+        {inlineMarkdown(line)}
+      </p>
+    )
+    i++
+  }
+
+  return elements
+}
+
+function inlineMarkdown(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    const bold = part.match(/^\*\*(.+)\*\*$/)
+    return bold ? <strong key={i} className="text-white/90 font-medium">{bold[1]}</strong> : part
+  })
+}
+
 const WELCOME = {
   en: "Hello, I'm ARKA Assistant. I can help you understand our investment strategies, walk you through the Simulator or Profiler, and answer questions about the access process. How can I help?",
   es: "Hola, soy el Asistente ARKA. Puedo ayudarte a entender nuestras estrategias de inversión, guiarte por el Simulador o el Perfilador, y responder preguntas sobre el proceso de acceso. ¿En qué puedo ayudarte?",
@@ -89,12 +158,12 @@ export default function ChatWidget() {
           <div className="overflow-y-auto p-4 space-y-3 h-[340px]">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[88%] px-4 py-2.5 text-[13px] leading-relaxed rounded-2xl ${
+                <div className={`max-w-[88%] px-4 py-3 rounded-2xl ${
                   msg.role === 'user'
-                    ? 'bg-[#C9A352]/12 text-white/85 rounded-br-sm border border-[#C9A352]/15'
-                    : 'bg-white/[0.045] text-white/75 rounded-bl-sm'
+                    ? 'bg-[#C9A352]/12 text-white/85 rounded-br-sm border border-[#C9A352]/15 text-[13px] leading-relaxed'
+                    : 'bg-white/[0.045] text-white/70 rounded-bl-sm'
                 }`}>
-                  {msg.content}
+                  {msg.role === 'user' ? msg.content : renderMarkdown(msg.content)}
                 </div>
               </div>
             ))}
