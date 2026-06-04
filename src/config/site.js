@@ -3,7 +3,7 @@
 
 // ⚠️  IMPORTANT: Confirm registration number with legal before production.
 //     Discrepancy found between 2025-00568 and 2024-00428.
-export const LEGAL_REGISTRATION_NUMBER = 'PENDING_CONFIRMATION'
+export const LEGAL_REGISTRATION_NUMBER = '2025-00568'
 
 export const SITE = {
   brandName: 'ARKA Global Investments',
@@ -113,6 +113,23 @@ export const LEGAL_DOCUMENTS = [
   { title: 'Restricted Jurisdictions', slug: 'jurisdictions' },
   { title: 'Investor Qualification Notice', slug: 'qualification' },
   { title: 'Confidentiality Notice', slug: 'confidentiality' },
+]
+
+export const OFFICES = [
+  {
+    city: 'Querétaro, México',
+    address: 'Manuel Gómez Morín No. 10, Oficina 10-E',
+    building: 'HighPark, Centro Sur',
+    zip: 'CP 76090',
+    country: 'México',
+  },
+  {
+    city: 'Gros-Islet, Saint Lucia',
+    address: 'Ground Floor, La Place Creole Building',
+    building: 'Rodney Village, Rodney Bay',
+    zip: '',
+    country: 'Saint Lucia',
+  },
 ]
 
 export const GLOBAL_DISCLAIMER =

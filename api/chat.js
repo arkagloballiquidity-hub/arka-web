@@ -81,17 +81,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'llama-3.1-8b-instant',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          ...messages.slice(-14), // keep last 14 messages (7 exchanges) for context
+          ...messages.slice(-14),
         ],
         max_tokens: 480,
         temperature: 0.65,

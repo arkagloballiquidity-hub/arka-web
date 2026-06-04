@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { NAV_LINKS, SITE, GLOBAL_DISCLAIMER, LEGAL_REGISTRATION_NUMBER } from '@/config/site'
+import { NAV_LINKS, SITE, GLOBAL_DISCLAIMER, LEGAL_REGISTRATION_NUMBER, OFFICES } from '@/config/site'
 
 export default function Footer() {
   return (
@@ -55,6 +55,22 @@ export default function Footer() {
                 Apply for Access →
               </Link>
             </div>
+          </div>
+        </div>
+
+        {/* Offices */}
+        <div className="border-t border-[#1E293B] pt-8 mb-8">
+          <p className="text-[10px] tracking-[0.25em] uppercase text-[#94A3B8] mb-4">Offices</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {OFFICES.map((office) => (
+              <div key={office.city} className="space-y-0.5 text-[11px] text-[#94A3B8] leading-relaxed">
+                <p className="text-white font-medium text-xs">{office.city}</p>
+                <p>{office.address}</p>
+                <p>{office.building}</p>
+                {office.zip && <p>{office.zip}</p>}
+                <p>{office.country}</p>
+              </div>
+            ))}
           </div>
         </div>
 
