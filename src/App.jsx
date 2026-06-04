@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { LanguageProvider } from '@/context/LanguageContext'
+import LoadingScreen from '@/components/shared/LoadingScreen'
 import Header from '@/components/shared/Header'
 import Footer from '@/components/shared/Footer'
 import Home from '@/pages/Home'
@@ -129,7 +130,12 @@ function Layout({ children, isHome }) {
 }
 
 export default function App() {
+  const [loading, setLoading] = useState(true)
+  const handleDone = useCallback(() => setLoading(false), [])
+
   return (
+    <>
+      {loading && <LoadingScreen onDone={handleDone} />}
     <BrowserRouter>
       <LanguageProvider>
       <SEOUpdater />
@@ -154,5 +160,6 @@ export default function App() {
       </Layout>
       </LanguageProvider>
     </BrowserRouter>
+    </>
   )
 }
