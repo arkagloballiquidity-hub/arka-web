@@ -31,11 +31,12 @@ export default function LoadingScreen({ onDone }) {
         <img
           src="/logo_arka.png"
           alt="ARKA"
-          className="w-16 h-16 object-contain"
+          className="w-48 h-48 object-contain"
+          style={{ filter: 'brightness(0) invert(1)' }}
         />
         <p
-          style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.25em' }}
-          className="text-white text-sm font-semibold uppercase tracking-widest"
+          style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.3em' }}
+          className="text-white text-2xl font-semibold uppercase"
         >
           ARKA GLOBAL INVESTMENTS
         </p>
