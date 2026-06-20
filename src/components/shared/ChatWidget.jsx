@@ -88,6 +88,16 @@ export default function ChatWidget() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
+  // Keep the welcome message in sync with the language, but only while the
+  // conversation hasn't started (don't wipe an ongoing chat).
+  useEffect(() => {
+    setMessages(prev =>
+      prev.length === 1 && prev[0].role === 'assistant'
+        ? [{ role: 'assistant', content: WELCOME[lang] || WELCOME.en }]
+        : prev
+    )
+  }, [lang])
+
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 120)
   }, [isOpen])

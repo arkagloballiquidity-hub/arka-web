@@ -68,7 +68,7 @@ function CTAButton({ to, children, outline = false }) {
   )
 }
 
-function StrategyCard({ s, applyLabel, refLabel, subLabel }) {
+function StrategyCard({ s, applyLabel, refLabel, subLabel, maxRiskLabel }) {
   return (
     <div className="flex flex-col p-7 rounded-xl border border-white/12 bg-black/55 backdrop-blur-md hover:border-white/22 hover:bg-black/65 transition-all duration-500 h-full">
       {/* Top section grows to fill — keeps divider anchored at same height */}
@@ -78,7 +78,7 @@ function StrategyCard({ s, applyLabel, refLabel, subLabel }) {
         </span>
         <div>
           <h3 className="text-white font-light text-lg mb-2 leading-snug">{s.name}</h3>
-          <p className="text-white/85 text-sm leading-relaxed">{s.objective}</p>
+          <p className="text-white/85 text-sm leading-relaxed text-justify">{s.objective}</p>
         </div>
       </div>
       {/* Divider — always at same distance from bottom */}
@@ -86,9 +86,13 @@ function StrategyCard({ s, applyLabel, refLabel, subLabel }) {
         <p className="text-[8px] tracking-[0.25em] uppercase text-white/60 mb-2">{refLabel}</p>
         <p className="text-4xl font-extralight text-white tracking-tight">{s.targetRef}</p>
         <p className="text-[9px] text-white/55 mt-1.5">{subLabel}</p>
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/[0.07]">
+          <span className="text-[8px] tracking-[0.25em] uppercase text-white/60">{maxRiskLabel}</span>
+          <span className="text-sm font-light text-[#e0a3a3] tracking-tight">{s.maxRisk}</span>
+        </div>
       </div>
-      <p className="text-xs text-white/78 leading-relaxed mb-5">{s.idealFor}</p>
-      <Link to="/access" className="text-[9px] tracking-[0.2em] uppercase text-white/70 border border-white/18 hover:border-[#004C45]/60 hover:text-white px-5 py-3 text-center transition-all duration-300 rounded-sm">
+      <p className="text-xs text-white/78 leading-relaxed mb-5 text-justify">{s.idealFor}</p>
+      <Link to="/contact" className="text-[9px] tracking-[0.2em] uppercase text-white/70 border border-white/18 hover:border-[#004C45]/60 hover:text-white px-5 py-3 text-center transition-all duration-300 rounded-sm">
         {applyLabel}
       </Link>
     </div>
@@ -194,9 +198,9 @@ export default function Home() {
   }, [])
 
   const STRATEGIES = [
-    { id: 'foundation', profile: t('strategies','foundation_profile'), name: t('strategies','foundation_name'), objective: t('strategies','foundation_obj'), targetRef: t('strategies','foundation_target'), idealFor: t('strategies','foundation_ideal') },
-    { id: 'growth',     profile: t('strategies','growth_profile'),     name: t('strategies','growth_name'),     objective: t('strategies','growth_obj'),     targetRef: t('strategies','growth_target'),     idealFor: t('strategies','growth_ideal') },
-    { id: 'alpha',      profile: t('strategies','alpha_profile'),      name: t('strategies','alpha_name'),      objective: t('strategies','alpha_obj'),      targetRef: t('strategies','alpha_target'),      idealFor: t('strategies','alpha_ideal') },
+    { id: 'foundation', profile: t('strategies','foundation_profile'), name: t('strategies','foundation_name'), objective: t('strategies','foundation_obj'), targetRef: t('strategies','foundation_target'), idealFor: t('strategies','foundation_ideal'), maxRisk: t('strategies','foundation_maxrisk') },
+    { id: 'growth',     profile: t('strategies','growth_profile'),     name: t('strategies','growth_name'),     objective: t('strategies','growth_obj'),     targetRef: t('strategies','growth_target'),     idealFor: t('strategies','growth_ideal'),     maxRisk: t('strategies','growth_maxrisk') },
+    { id: 'alpha',      profile: t('strategies','alpha_profile'),      name: t('strategies','alpha_name'),      objective: t('strategies','alpha_obj'),      targetRef: t('strategies','alpha_target'),      idealFor: t('strategies','alpha_ideal'),      maxRisk: t('strategies','alpha_maxrisk') },
   ]
   const isEs = lang === 'es'
   const RISK_METRICS = SITE_RISK_METRICS.map(m => ({
@@ -258,12 +262,12 @@ export default function Home() {
             <h2 className="text-[clamp(2.6rem,7vw,6.5rem)] font-extralight text-white/55 leading-[1.04] tracking-tight mb-8 md:mb-10">
               {t('home','hero_h2')}
             </h2>
-            <p className="text-white/82 text-base md:text-lg leading-relaxed max-w-xl mb-10">
+            <p className="text-white/82 text-base md:text-lg leading-relaxed max-w-xl mb-10 text-justify">
               {t('home','hero_desc')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <CTAButton to="/access">{t('home','apply_cta')}</CTAButton>
-              <CTAButton to="/strategies" outline>{t('home','explore_cta')}</CTAButton>
+              <CTAButton to="/contact">{t('home','contact_cta')}</CTAButton>
+              <CTAButton to="/profiler" outline>{t('home','profiler_cta')}</CTAButton>
             </div>
           </div>
 
@@ -295,14 +299,12 @@ export default function Home() {
                   </h2>
                 </Reveal>
               </div>
-              <div className="space-y-5">
-                <Reveal delay={0.1}>
-                  <p className="text-white/88 text-base leading-[1.8]">{t('home','about_p1')}</p>
-                </Reveal>
-                <Reveal delay={0.18}>
-                  <p className="text-white/88 text-base leading-[1.8]">{t('home','about_p2')}</p>
-                </Reveal>
-              </div>
+              <Reveal delay={0.1}>
+                <div className="space-y-5 rounded-xl border border-white/10 bg-black/45 backdrop-blur-md p-7 md:p-8">
+                  <p className="text-white/88 text-base leading-[1.8] text-justify">{t('home','about_p1')}</p>
+                  <p className="text-white/88 text-base leading-[1.8] text-justify">{t('home','about_p2')}</p>
+                </div>
+              </Reveal>
             </div>
 
             {/* Philosophy pillars */}
@@ -362,6 +364,7 @@ export default function Home() {
                     applyLabel={t('home','strategy_apply')}
                     refLabel={t('home','strategy_label')}
                     subLabel={t('home','strategy_sublabel')}
+                    maxRiskLabel={t('home','strategy_maxrisk')}
                   />
                 </Reveal>
               ))}
@@ -375,6 +378,40 @@ export default function Home() {
                 {t('home','strategies_cta')}
               </Link>
             </Reveal>
+
+            {/* Risk framework — unified within Strategies */}
+            <div className="mt-20 md:mt-28 pt-16 border-t border-white/[0.07]">
+              <div className="grid md:grid-cols-2 gap-10 mb-14 items-end">
+                <div>
+                  <Reveal>
+                    <Label>{t('home','risk_eyebrow')}</Label>
+                    <h3 className="text-[clamp(1.6rem,3.2vw,2.6rem)] font-light text-white leading-tight tracking-tight">
+                      {t('home','risk_h2')}
+                    </h3>
+                  </Reveal>
+                </div>
+                <Reveal delay={0.1}>
+                  <p className="text-white/88 text-base leading-relaxed text-justify">{t('home','risk_desc')}</p>
+                </Reveal>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {RISK_METRICS.map((m, i) => (
+                  <Reveal key={m.label} delay={i * 0.07}>
+                    <GlassCard label={m.label} value={m.value} />
+                  </Reveal>
+                ))}
+              </div>
+
+              <Reveal delay={0.15}>
+                <p className="text-[9px] text-white/22 max-w-2xl mb-5">
+                  ⚠ {t('home','risk_disclaimer')}
+                </p>
+                <Link to="/strategies" className="text-[10px] tracking-[0.22em] uppercase text-white/40 hover:text-white border-b border-white/15 hover:border-white/55 pb-0.5 transition-all">
+                  {t('home','risk_cta')}
+                </Link>
+              </Reveal>
+            </div>
           </div>
         </section>
 
@@ -382,53 +419,12 @@ export default function Home() {
           <Rule />
         </div>
 
-        {/* ── SECTION 03 — RISK FRAMEWORK ──────────────────────────────── */}
-        <section className="px-5 sm:px-8 md:px-16 lg:px-28 xl:px-36 py-24 md:py-36">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-center gap-6 mb-16">
-              <SectionNum n="03" />
-              <div className="flex-1 h-px bg-white/[0.08]" />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-10 mb-14 items-end">
-              <div>
-                <Reveal>
-                  <Label>{t('home','risk_eyebrow')}</Label>
-                  <h2 className="text-[clamp(1.8rem,4vw,3.2rem)] font-light text-white leading-tight tracking-tight">
-                    {t('home','risk_h2')}
-                  </h2>
-                </Reveal>
-              </div>
-              <Reveal delay={0.1}>
-                <p className="text-white/88 text-base leading-relaxed">{t('home','risk_desc')}</p>
-              </Reveal>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              {RISK_METRICS.map((m, i) => (
-                <Reveal key={m.label} delay={i * 0.07}>
-                  <GlassCard label={m.label} value={m.value} />
-                </Reveal>
-              ))}
-            </div>
-
-            <Reveal delay={0.15}>
-              <p className="text-[9px] text-white/22 max-w-2xl mb-5">
-                ⚠ {t('home','risk_disclaimer')}
-              </p>
-              <Link to="/risk" className="text-[10px] tracking-[0.22em] uppercase text-white/40 hover:text-white border-b border-white/15 hover:border-white/55 pb-0.5 transition-all">
-                {t('home','risk_cta')}
-              </Link>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ── SECTION 04 — WORLD MAP ───────────────────────────────────── */}
+        {/* ── SECTION 03 — WORLD MAP ───────────────────────────────────── */}
         <section className="py-24 md:py-36">
           <div className="px-5 sm:px-8 md:px-16 lg:px-28 xl:px-36 mb-10">
             <div className="max-w-6xl mx-auto">
               <div className="flex items-center gap-6 mb-16">
-                <SectionNum n="04" />
+                <SectionNum n="03" />
                 <div className="flex-1 h-px bg-white/[0.08]" />
               </div>
               <div className="grid md:grid-cols-2 gap-10 items-end">
@@ -470,11 +466,11 @@ export default function Home() {
           <Rule />
         </div>
 
-        {/* ── SECTION 05 — INFRASTRUCTURE ──────────────────────────────── */}
+        {/* ── SECTION 04 — INFRASTRUCTURE ──────────────────────────────── */}
         <section className="px-5 sm:px-8 md:px-16 lg:px-28 xl:px-36 py-24 md:py-36">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center gap-6 mb-16">
-              <SectionNum n="05" />
+              <SectionNum n="04" />
               <div className="flex-1 h-px bg-white/[0.08]" />
             </div>
 
@@ -522,7 +518,7 @@ export default function Home() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <CTAButton to="/access">{t('home','apply_cta')}</CTAButton>
+                  <CTAButton to="/profiler">{t('home','profiler_cta')}</CTAButton>
                   <a
                     href={SITE.investorPortal}
                     target="_blank"

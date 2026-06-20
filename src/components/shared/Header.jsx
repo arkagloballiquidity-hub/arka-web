@@ -5,8 +5,8 @@ import { NavHeader } from '@/components/ui/nav-header'
 import { useLang } from '@/context/LanguageContext'
 
 const TOOLS = [
-  { key: 'simulator', href: '/simulator', external: false },
   { key: 'profiler',  href: '/profiler',  external: false },
+  { key: 'simulator', href: '/simulator', external: false },
 ]
 
 export default function Header() {
@@ -18,15 +18,13 @@ export default function Header() {
     { label: t('nav', 'home'),       href: '/' },
     { label: t('nav', 'about'),      href: '/about' },
     { label: t('nav', 'strategies'), href: '/strategies' },
-    { label: t('nav', 'risk'),       href: '/risk' },
-    { label: t('nav', 'access'),     href: '/access' },
     { label: t('nav', 'contact'),    href: '/contact' },
   ]
 
   const MOBILE_LINKS = [
     ...NAV_TABS,
-    { label: t('nav', 'simulator'), href: TOOLS[0].href, external: false },
-    { label: t('nav', 'profiler'),  href: TOOLS[1].href, external: false },
+    { label: t('nav', 'profiler'),  href: TOOLS[0].href, external: false },
+    { label: t('nav', 'simulator'), href: TOOLS[1].href, external: false },
   ]
 
   useEffect(() => { setMenuOpen(false) }, [location])
@@ -57,27 +55,17 @@ export default function Header() {
             to={TOOLS[0].href}
             className="text-[10px] tracking-[0.18em] uppercase text-white/45 hover:text-[#C9A352] transition-colors duration-200"
           >
-            {t('nav', 'simulator')}
+            {t('nav', 'profiler')}
           </Link>
           <Link
             to={TOOLS[1].href}
             className="text-[10px] tracking-[0.18em] uppercase text-white/45 hover:text-[#C9A352] transition-colors duration-200"
           >
-            {t('nav', 'profiler')}
+            {t('nav', 'simulator')}
           </Link>
 
           {/* Divider */}
           <span className="w-px h-3 bg-white/15" />
-
-          {/* Portal */}
-          <a
-            href={SITE.investorPortal}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] tracking-[0.18em] uppercase text-white/45 hover:text-white transition-colors duration-200"
-          >
-            {t('nav', 'portal')}
-          </a>
 
           {/* Language toggle */}
           <button
@@ -90,13 +78,15 @@ export default function Header() {
             <span className={lang === 'es' ? 'text-white' : 'text-white/35'}>ES</span>
           </button>
 
-          {/* Apply CTA */}
-          <Link
-            to="/access"
+          {/* Login — investor portal sign-in */}
+          <a
+            href={SITE.investorPortal}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-[10px] tracking-[0.18em] uppercase px-5 py-2.5 border border-white/20 text-white hover:bg-white hover:text-[#050505] transition-all duration-300 rounded-full font-medium"
           >
-            {t('nav', 'apply')}
-          </Link>
+            {t('nav', 'portal')}
+          </a>
         </div>
 
         {/* Hamburger — mobile */}
@@ -137,20 +127,16 @@ export default function Header() {
           )}
 
           <div className="border-t border-white/10 pt-5 flex flex-col gap-4">
-            <a href={SITE.investorPortal} target="_blank" rel="noopener noreferrer"
-              className="text-sm tracking-widest uppercase text-white/50">
-              {t('nav', 'portal')}
-            </a>
             <button
               onClick={toggle}
               className="text-sm tracking-widest uppercase text-left text-white/50 hover:text-white"
             >
               {lang === 'en' ? '🌐 Cambiar a Español' : '🌐 Switch to English'}
             </button>
-            <Link to="/access"
+            <a href={SITE.investorPortal} target="_blank" rel="noopener noreferrer"
               className="text-sm tracking-widest uppercase px-5 py-3.5 border border-white/20 text-white text-center rounded-full">
-              {t('nav', 'apply')}
-            </Link>
+              {t('nav', 'portal')}
+            </a>
           </div>
         </div>
       )}

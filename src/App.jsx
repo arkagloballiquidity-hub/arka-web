@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect, useState, useCallback } from 'react'
 import { LanguageProvider } from '@/context/LanguageContext'
 import LoadingScreen from '@/components/shared/LoadingScreen'
@@ -7,11 +7,10 @@ import Footer from '@/components/shared/Footer'
 import Home from '@/pages/Home'
 import About from '@/pages/About'
 import Strategies from '@/pages/Strategies'
-import RiskFramework from '@/pages/RiskFramework'
+// RiskFramework merged into Strategies — /risk redirects to /strategies
 import Markets from '@/pages/Markets'
 import Infrastructure from '@/pages/Infrastructure'
 import StrategicAssets from '@/pages/StrategicAssets'
-import InvestorAccess from '@/pages/InvestorAccess'
 import LegalCenter from '@/pages/LegalCenter'
 import Contact from '@/pages/Contact'
 import Simulator from '@/pages/Simulator'
@@ -145,11 +144,13 @@ export default function App() {
 
           <Route path="/about" element={<About />} />
           <Route path="/strategies" element={<Strategies />} />
-          <Route path="/risk" element={<RiskFramework />} />
+          {/* Risk Framework merged into Strategies */}
+          <Route path="/risk" element={<Navigate to="/strategies" replace />} />
           <Route path="/markets" element={<Markets />} />
           <Route path="/infrastructure" element={<Infrastructure />} />
           <Route path="/strategic-assets" element={<StrategicAssets />} />
-          <Route path="/access" element={<InvestorAccess />} />
+          {/* Access page removed — redirect to Contact */}
+          <Route path="/access" element={<Navigate to="/contact" replace />} />
           <Route path="/legal" element={<LegalCenter />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/simulator" element={<Simulator />} />

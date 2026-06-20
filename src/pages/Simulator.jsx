@@ -379,7 +379,7 @@ export default function Simulator() {
       show: 'Show Breakdown',
       hide: 'Hide Breakdown',
       disclaimer: '⚠ This simulator uses target reference rates and does not guarantee future results. Investing involves risk, including possible loss of capital.',
-      apply: 'Apply for Access',
+      apply: 'Contact',
     },
     es: {
       title: 'Simulador de Inversión',
@@ -408,7 +408,7 @@ export default function Simulator() {
       show: 'Ver Desglose',
       hide: 'Ocultar Desglose',
       disclaimer: '⚠ Este simulador utiliza tasas de referencia objetivo y no garantiza resultados futuros. Invertir implica riesgo, incluyendo la posible pérdida de capital.',
-      apply: 'Solicitar Acceso',
+      apply: 'Contacto',
     },
   }
   const tx = T[lang] || T.en
@@ -761,7 +761,7 @@ export default function Simulator() {
 
               {/* CTA */}
               <div className="flex gap-3 pt-2">
-                <Link to="/access"
+                <Link to="/contact"
                   className="inline-flex items-center gap-2 text-[11px] tracking-[0.22em] uppercase font-medium bg-[#004C45] text-white hover:bg-[#005c54] px-8 py-4 rounded-sm transition-all duration-300">
                   {tx.apply}
                 </Link>

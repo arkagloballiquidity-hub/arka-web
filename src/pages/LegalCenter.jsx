@@ -1,6 +1,9 @@
 import SectionHeading from '@/components/shared/SectionHeading'
-import { LEGAL_DOCUMENTS, GLOBAL_DISCLAIMER, SITE, LEGAL_REGISTRATION_NUMBER } from '@/config/site'
+import { LEGAL_DOCUMENTS, GLOBAL_DISCLAIMER, GLOBAL_DISCLAIMER_ES, SITE, LEGAL_REGISTRATION_NUMBER } from '@/config/site'
+import { useLang } from '@/context/LanguageContext'
 
+// NOTE: Legal document bodies are kept in English pending legal review of a
+// Spanish version. Only the surrounding UI is localized.
 const LEGAL_CONTENT = {
   'aml-kyc': {
     title: 'AML / KYC Policy',
@@ -61,17 +64,20 @@ ARKA Global Liquidity LTD will not disclose investor information to third partie
 }
 
 export default function LegalCenter() {
+  const { lang, t } = useLang()
+  const isEs = lang === 'es'
+  const disclaimer = isEs ? GLOBAL_DISCLAIMER_ES : GLOBAL_DISCLAIMER
+
   return (
     <main className="pt-20">
       <section className="section-padding bg-[#050505]">
         <div className="container-arka max-w-4xl">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-[#94A3B8] mb-6">Legal Center</p>
+          <p className="text-[10px] tracking-[0.35em] uppercase text-[#94A3B8] mb-6">{t('legal', 'eyebrow')}</p>
           <h1 className="text-5xl md:text-6xl font-light text-white leading-tight tracking-tight mb-8">
-            Legal Documentation<br />& Disclosures
+            {t('legal', 'h1_line1')}<br />{t('legal', 'h1_line2')}
           </h1>
           <p className="text-[#94A3B8] text-lg leading-relaxed max-w-2xl">
-            All legal documents governing participation in ARKA investment structures are available
-            below. Review all applicable documents before applying for access.
+            {t('legal', 'intro')}
           </p>
         </div>
       </section>
@@ -79,7 +85,7 @@ export default function LegalCenter() {
       {/* Document Cards */}
       <section className="section-padding bg-[#0A0A0A]">
         <div className="container-arka">
-          <SectionHeading eyebrow="Legal Documents" title="Eight documents. Full disclosure." />
+          <SectionHeading eyebrow={t('legal', 'docs_eyebrow')} title={t('legal', 'docs_title')} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {LEGAL_DOCUMENTS.map((doc) => {
               const content = LEGAL_CONTENT[doc.slug]
@@ -88,7 +94,7 @@ export default function LegalCenter() {
                   <div className="flex items-start justify-between">
                     <h3 className="text-white font-medium">{doc.title}</h3>
                     <span className="text-[9px] tracking-widest uppercase text-[#94A3B8] border border-[#1E293B] px-2 py-0.5 rounded shrink-0 ml-3">
-                      Active
+                      {t('legal', 'active')}
                     </span>
                   </div>
                   {content && (
@@ -103,7 +109,7 @@ export default function LegalCenter() {
                     }}
                     className="text-[10px] tracking-[0.2em] uppercase text-[#94A3B8] hover:text-white transition-colors"
                   >
-                    Read Full Document ↓
+                    {t('legal', 'read_full')}
                   </button>
                 </div>
               )
@@ -139,15 +145,15 @@ export default function LegalCenter() {
         <div className="container-arka">
           <div className="space-y-4">
             <p className="text-[10px] text-[#94A3B8] leading-relaxed max-w-4xl">
-              {GLOBAL_DISCLAIMER}
+              {disclaimer}
             </p>
             <p className="text-[10px] text-[#94A3B8]">
-              <strong className="text-white">ARKA Global Investments</strong> is the investment brand within the ARKA ecosystem.{' '}
-              <strong className="text-white">ARKA Global Liquidity LTD</strong> acts as the legal/operating entity where applicable.
+              <strong className="text-white">ARKA Global Investments</strong>{t('legal', 'entity_mid')}
+              <strong className="text-white">ARKA Global Liquidity LTD</strong>{t('legal', 'entity_end')}
               {LEGAL_REGISTRATION_NUMBER !== 'PENDING_CONFIRMATION' ? (
-                <> Registration No. {LEGAL_REGISTRATION_NUMBER}.</>
+                <> {t('legal', 'reg_no')} {LEGAL_REGISTRATION_NUMBER}.</>
               ) : (
-                <> Registration number to be confirmed before public deployment.</>
+                <> {t('legal', 'reg_pending')}</>
               )}
             </p>
           </div>

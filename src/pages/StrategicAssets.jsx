@@ -1,5 +1,6 @@
 import SectionHeading from '@/components/shared/SectionHeading'
 import CTASection from '@/components/shared/CTASection'
+import { useLang } from '@/context/LanguageContext'
 
 function AssetPillar({ title, body }) {
   return (
@@ -12,18 +13,18 @@ function AssetPillar({ title, body }) {
 }
 
 export default function StrategicAssets() {
+  const { t } = useLang()
+
   return (
     <main className="pt-20">
       <section className="section-padding bg-[#050505]">
         <div className="container-arka max-w-4xl">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-[#94A3B8] mb-6">Strategic Assets</p>
+          <p className="text-[10px] tracking-[0.35em] uppercase text-[#94A3B8] mb-6">{t('assets', 'eyebrow')}</p>
           <h1 className="text-5xl md:text-6xl font-light text-white leading-tight tracking-tight mb-8">
-            Strategic Asset-Backed<br />Alignment
+            {t('assets', 'h1')}
           </h1>
           <p className="text-[#94A3B8] text-lg leading-relaxed max-w-2xl">
-            ARKA operates within a broader ecosystem of strategic assets and financial infrastructure
-            designed to support long-term institutional growth, capital alignment, and asset-backed
-            structuring.
+            {t('assets', 'intro')}
           </p>
         </div>
       </section>
@@ -32,27 +33,15 @@ export default function StrategicAssets() {
       <section className="section-padding bg-[#0A0A0A]">
         <div className="container-arka">
           <SectionHeading
-            eyebrow="Ecosystem Overview"
-            title="Institutional alignment. Long-term capital architecture."
-            subtitle="This section describes ARKA's broader asset ecosystem — not real estate sales, property listings, or retail investment products."
+            eyebrow={t('assets', 'eco_eyebrow')}
+            title={t('assets', 'eco_title')}
+            subtitle={t('assets', 'eco_subtitle')}
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <AssetPillar
-              title="Strategic Asset Ecosystem"
-              body="ARKA's institutional framework is supported by a diversified ecosystem of strategic assets, financial relationships, and structured capital instruments aligned with long-term institutional objectives."
-            />
-            <AssetPillar
-              title="Asset-Backed Structuring"
-              body="Select mandates and operational structures are designed around asset-backed principles, providing additional collateral alignment and institutional credibility to the capital base."
-            />
-            <AssetPillar
-              title="Long-Term Institutional Alignment"
-              body="Strategic assets are evaluated on long-term alignment with ARKA's capital stewardship mission — not on short-term yield optimization or speculative appreciation."
-            />
-            <AssetPillar
-              title="Private Capital Architecture"
-              body="The architecture for private capital participation within the ARKA ecosystem is designed to maintain separation between operating entities, investor mandates, and strategic asset structures."
-            />
+            <AssetPillar title={t('assets', 'pillar1_title')} body={t('assets', 'pillar1_body')} />
+            <AssetPillar title={t('assets', 'pillar2_title')} body={t('assets', 'pillar2_body')} />
+            <AssetPillar title={t('assets', 'pillar3_title')} body={t('assets', 'pillar3_body')} />
+            <AssetPillar title={t('assets', 'pillar4_title')} body={t('assets', 'pillar4_body')} />
           </div>
         </div>
       </section>
@@ -61,22 +50,18 @@ export default function StrategicAssets() {
       <section className="section-padding bg-[#050505]">
         <div className="container-arka max-w-3xl">
           <div className="p-8 arka-card space-y-4">
-            <p className="text-[10px] tracking-[0.25em] uppercase text-[#94A3B8]">Important Clarification</p>
+            <p className="text-[10px] tracking-[0.25em] uppercase text-[#94A3B8]">{t('assets', 'clarify_label')}</p>
             <p className="text-[#94A3B8] text-sm leading-relaxed">
-              This section does not represent real estate sales, property investment products, or
-              retail investment services. ARKA's strategic asset narrative is exclusively
-              institutional — focused on capital alignment, ecosystem positioning, and structural
-              backing for long-term private mandates.
+              {t('assets', 'clarify_p1')}
             </p>
             <p className="text-[#94A3B8] text-sm leading-relaxed">
-              Details on strategic asset composition and valuation are available only to qualified
-              participants under an executed NDA and contracting process.
+              {t('assets', 'clarify_p2')}
             </p>
           </div>
         </div>
       </section>
 
-      <CTASection eyebrow="Qualified Access" title="Explore participation in ARKA's institutional ecosystem." />
+      <CTASection eyebrow={t('assets', 'cta_eyebrow')} title={t('assets', 'cta_title')} />
     </main>
   )
 }

@@ -316,7 +316,7 @@ export default function Profiler() {
       growth:      'Strategic Growth',
       alpha:       'Alpha Force',
       simulate:    'Run Simulation →',
-      apply:       'Apply for Access',
+      apply:       'Contact',
       restart:     'Retake Assessment',
       disclaimer:  '⚠ This profiling is indicative only. Strategy assignment is subject to eligibility review, KYC/AML procedures, and execution of applicable legal documents.',
     },
@@ -336,7 +336,7 @@ export default function Profiler() {
       growth:      'Crecimiento Estratégico',
       alpha:       'Alpha Force',
       simulate:    'Ver Simulación →',
-      apply:       'Solicitar Acceso',
+      apply:       'Contacto',
       restart:     'Repetir Evaluación',
       disclaimer:  '⚠ Este perfilamiento es indicativo. La asignación de estrategia está sujeta a revisión de elegibilidad, KYC/AML y ejecución de los documentos legales aplicables.',
     },
@@ -587,7 +587,7 @@ export default function Profiler() {
                     className="inline-flex items-center justify-center gap-2 text-[11px] tracking-[0.22em] uppercase font-medium bg-[#004C45] text-white hover:bg-[#005c54] px-8 py-4 rounded-sm transition-all duration-300">
                     {tx.simulate}
                   </button>
-                  <Link to="/access"
+                  <Link to="/contact"
                     className="inline-flex items-center justify-center gap-2 text-[11px] tracking-[0.22em] uppercase font-medium border border-white/18 text-white/65 hover:border-white/40 hover:text-white px-8 py-4 rounded-sm transition-all duration-300">
                     {tx.apply}
                   </Link>

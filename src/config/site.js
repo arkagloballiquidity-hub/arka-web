@@ -12,17 +12,18 @@ export const SITE = {
   description:
     'Disciplined strategies. Defined risk architecture. Long-term capital growth.',
   email: 'contacto@arkaltd.io',
-  investorPortal: 'https://my.arkaltd.io',
+  // All portal links point to the sign-in page
+  investorPortal: 'https://my.arkaltd.io/en/auth/sign-in',
+  portalDomain: 'my.arkaltd.io',
   domain: 'www.arkaglobalinvestments.com',
 }
 
+// Footer navigation — labels resolved via i18n (footer.nav_*) by href.
 export const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'About ARKA', href: '/about' },
   { label: 'Investment Strategies', href: '/strategies' },
-  { label: 'Risk Framework', href: '/risk' },
   { label: 'Infrastructure', href: '/infrastructure' },
-  { label: 'Investor Access', href: '/access' },
   { label: 'Legal Center', href: '/legal' },
   { label: 'Contact', href: '/contact' },
 ]
@@ -31,32 +32,53 @@ export const STRATEGIES = [
   {
     id: 'foundation',
     name: 'ARKA Foundation Strategy',
+    nameEs: 'Estrategia Fundación ARKA',
     profile: 'Conservative',
+    profileEs: 'Conservadora',
     objective: 'Capital preservation and stable long-term growth.',
+    objectiveEs: 'Preservación de capital y crecimiento estable a largo plazo.',
     targetRef: '18% annual objective',
+    targetRefEs: 'Objetivo anual del 18%',
     idealFor: 'Long-term private capital, conservative investors, family offices.',
+    idealForEs: 'Capital privado a largo plazo, inversores conservadores, family offices.',
     description:
       'A disciplined capital allocation strategy focused on stability, consistency, and long-term capital preservation through systematic global market exposure.',
+    descriptionEs:
+      'Una estrategia disciplinada de asignación de capital enfocada en la estabilidad, la consistencia y la preservación de capital a largo plazo mediante exposición sistemática a los mercados globales.',
   },
   {
     id: 'growth',
     name: 'ARKA Strategic Growth',
+    nameEs: 'Crecimiento Estratégico ARKA',
     profile: 'Moderate',
+    profileEs: 'Moderada',
     objective: 'Capital appreciation with controlled institutional exposure.',
+    objectiveEs: 'Apreciación de capital con exposición institucional controlada.',
     targetRef: '24% annual objective',
+    targetRefEs: 'Objetivo anual del 24%',
     idealFor: 'Entrepreneurs, experienced investors, private capital allocators.',
+    idealForEs: 'Empresarios, inversores experimentados, asignadores de capital privado.',
     description:
       'An actively managed portfolio designed to enhance capital appreciation through dynamic global market positioning, quantitative research, and institutional risk management.',
+    descriptionEs:
+      'Un portafolio gestionado activamente diseñado para potenciar la apreciación de capital mediante posicionamiento dinámico en los mercados globales, investigación cuantitativa y gestión institucional del riesgo.',
   },
   {
     id: 'alpha',
     name: 'ARKA Alpha Force',
+    nameEs: 'ARKA Alpha Force',
     profile: 'Active / Quantitative',
+    profileEs: 'Activa / Cuantitativa',
     objective: 'Capture market inefficiencies through quantitative models and systematic execution.',
+    objectiveEs: 'Capturar ineficiencias de mercado mediante modelos cuantitativos y ejecución sistemática.',
     targetRef: '36% annual objective',
+    targetRefEs: 'Objetivo anual del 36%',
     idealFor: 'HNWI, family offices, alternative strategy investors.',
+    idealForEs: 'HNWI, family offices, inversores en estrategias alternativas.',
     description:
       'A performance-oriented strategy seeking superior risk-adjusted returns by capturing market inefficiencies through advanced quantitative models, systematic execution, and opportunistic allocation.',
+    descriptionEs:
+      'Una estrategia orientada al rendimiento que busca retornos superiores ajustados al riesgo capturando ineficiencias de mercado mediante modelos cuantitativos avanzados, ejecución sistemática y asignación oportunista.',
   },
 ]
 
@@ -74,34 +96,40 @@ export const TIMELINE = [
   {
     period: '2015–2018',
     title: 'Foundation & Market Research',
+    titleEs: 'Fundación e Investigación de Mercado',
     body: 'Development of proprietary trading frameworks across global derivatives markets, including liquidity analysis, order flow research, market microstructure, and yield inefficiency modeling.',
+    bodyEs: 'Desarrollo de marcos de trading propietarios en los mercados globales de derivados, incluyendo análisis de liquidez, investigación de order flow, microestructura de mercado y modelado de ineficiencias de rendimiento.',
   },
   {
     period: '2019–2023',
     title: 'Quantitative Infrastructure Expansion',
+    titleEs: 'Expansión de Infraestructura Cuantitativa',
     body: 'Expansion of proprietary financial technology, multi-cycle stress testing, FIX API execution architecture, macroeconomic signal integration, and risk-engine optimization.',
+    bodyEs: 'Expansión de tecnología financiera propietaria, pruebas de estrés multi-ciclo, arquitectura de ejecución FIX API, integración de señales macroeconómicas y optimización del motor de riesgo.',
   },
   {
     period: '2024–2025',
     title: 'Institutional Structuring & Compliance',
+    titleEs: 'Estructuración Institucional y Cumplimiento',
     body: 'Implementation of broker-grade infrastructure, institutional liquidity relationships, AML/KYC protocols, compliance structure, and proprietary quantitative analytics.',
+    bodyEs: 'Implementación de infraestructura de grado bróker, relaciones de liquidez institucional, protocolos AML/KYC, estructura de cumplimiento y analítica cuantitativa propietaria.',
   },
 ]
 
 export const INFRASTRUCTURE_ITEMS = [
-  { label: 'Segregated Client Accounts', detail: 'Capital held in individually segregated structures.' },
-  { label: 'Liquidity Aggregation', detail: 'oneZero institutional liquidity aggregation.' },
-  { label: 'Execution Infrastructure', detail: 'Equinix IBX co-location for ultra-low-latency execution.' },
-  { label: 'Prime of Prime', detail: 'B2BROKER Prime of Prime institutional access.' },
-  { label: 'Banking Network', detail: 'Eqwire, JP Morgan, Citibank, DBS — institutional references.' },
-  { label: 'Investor Portal', detail: 'Real-time visibility at my.arkaltd.io.' },
+  { label: 'Segregated Client Accounts', labelEs: 'Cuentas de Cliente Segregadas', detail: 'Capital held in individually segregated structures.', detailEs: 'Capital mantenido en estructuras individualmente segregadas.' },
+  { label: 'Liquidity Aggregation', labelEs: 'Agregación de Liquidez', detail: 'oneZero institutional liquidity aggregation.', detailEs: 'Agregación de liquidez institucional oneZero.' },
+  { label: 'Execution Infrastructure', labelEs: 'Infraestructura de Ejecución', detail: 'Equinix IBX co-location for ultra-low-latency execution.', detailEs: 'Co-location en Equinix IBX para ejecución de ultra-baja latencia.' },
+  { label: 'Prime of Prime', labelEs: 'Prime of Prime', detail: 'B2BROKER Prime of Prime institutional access.', detailEs: 'Acceso institucional Prime of Prime de B2BROKER.' },
+  { label: 'Banking Network', labelEs: 'Red Bancaria', detail: 'Eqwire, JP Morgan, Citibank, DBS — institutional references.', detailEs: 'Eqwire, JP Morgan, Citibank, DBS — referencias institucionales.' },
+  { label: 'Investor Portal', labelEs: 'Portal del Inversor', detail: 'Real-time visibility at my.arkaltd.io.', detailEs: 'Visibilidad en tiempo real en my.arkaltd.io.' },
 ]
 
 export const MARKETS = [
-  { ticker: 'SPXUSD', label: 'S&P 500', role: 'Primary index exposure' },
-  { ticker: 'NAS100', label: 'Nasdaq 100', role: 'Tactical index exposure' },
-  { ticker: 'US30', label: 'Dow Jones 30', role: 'Tactical index exposure' },
-  { ticker: 'EURUSD', label: 'Euro / US Dollar', role: 'Algorithmic FX model' },
+  { ticker: 'SPXUSD', label: 'S&P 500', role: 'Primary index exposure', roleEs: 'Exposición principal a índices' },
+  { ticker: 'NAS100', label: 'Nasdaq 100', role: 'Tactical index exposure', roleEs: 'Exposición táctica a índices' },
+  { ticker: 'US30', label: 'Dow Jones 30', role: 'Tactical index exposure', roleEs: 'Exposición táctica a índices' },
+  { ticker: 'EURUSD', label: 'Euro / US Dollar', role: 'Algorithmic FX model', roleEs: 'Modelo algorítmico de FX' },
 ]
 
 export const LEGAL_DOCUMENTS = [
@@ -135,5 +163,11 @@ export const OFFICES = [
 export const GLOBAL_DISCLAIMER =
   'This website is for informational purposes only and does not constitute an offer to sell securities, financial advice, legal advice, tax advice, or investment solicitation. Participation is available only to qualified participants, subject to eligibility review, jurisdictional restrictions, KYC/AML procedures, and execution of applicable legal documents. Investment strategies involve risk, including possible loss of capital. Target returns, historical results, simulations, or projections are not guarantees of future performance.'
 
+export const GLOBAL_DISCLAIMER_ES =
+  'Este sitio web es solo para fines informativos y no constituye una oferta de venta de valores, asesoramiento financiero, legal, fiscal ni solicitud de inversión. La participación está disponible únicamente para participantes calificados, sujeto a revisión de elegibilidad, restricciones jurisdiccionales, procedimientos KYC/AML y ejecución de documentos legales aplicables. Las estrategias de inversión implican riesgo, incluyendo la posible pérdida de capital. Los rendimientos objetivo, resultados históricos, simulaciones o proyecciones no son garantía de rendimiento futuro.'
+
 export const STRATEGY_DISCLAIMER =
   'Target objectives are not guaranteed. Past performance, simulations, models, or internal references do not guarantee future results. Investing involves risk, including possible loss of capital.'
+
+export const STRATEGY_DISCLAIMER_ES =
+  'Los objetivos no están garantizados. El rendimiento pasado, las simulaciones, los modelos o las referencias internas no garantizan resultados futuros. Invertir implica riesgo, incluyendo la posible pérdida de capital.'

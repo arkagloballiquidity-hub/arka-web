@@ -1,20 +1,29 @@
 import { useState } from 'react'
 import SectionHeading from '@/components/shared/SectionHeading'
 import { SITE } from '@/config/site'
-
-const INVESTOR_TYPES = [
-  'Individual Qualified Investor',
-  'Family Office',
-  'Entrepreneur / Private Capital',
-  'HNWI',
-  'Institutional Investor',
-  'Other',
-]
+import { useLang } from '@/context/LanguageContext'
 
 export default function Contact() {
+  const { t } = useLang()
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  const INVESTOR_TYPES = [
+    t('contact', 'type_individual'),
+    t('contact', 'type_family'),
+    t('contact', 'type_entrepreneur'),
+    t('contact', 'type_hnwi'),
+    t('contact', 'type_institutional'),
+    t('contact', 'type_other'),
+  ]
+
+  const FIELDS = [
+    { id: 'name',    label: t('contact', 'f_name'),    type: 'text',  required: true  },
+    { id: 'email',   label: t('contact', 'f_email'),   type: 'email', required: true  },
+    { id: 'entity',  label: t('contact', 'f_entity'),  type: 'text',  required: false },
+    { id: 'country', label: t('contact', 'f_country'), type: 'text',  required: true  },
+  ]
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -32,10 +41,10 @@ export default function Contact() {
       if (res.ok) {
         setSubmitted(true)
       } else {
-        setError('Could not send message. Please email us directly.')
+        setError(t('contact', 'err_send'))
       }
     } catch {
-      setError('Network error. Please email us directly.')
+      setError(t('contact', 'err_network'))
     } finally {
       setLoading(false)
     }
@@ -45,12 +54,12 @@ export default function Contact() {
     <main className="pt-20">
       <section className="section-padding bg-[#050505]">
         <div className="container-arka max-w-4xl">
-          <p className="text-[10px] tracking-[0.35em] uppercase text-[#94A3B8] mb-6">Contact</p>
+          <p className="text-[10px] tracking-[0.35em] uppercase text-[#94A3B8] mb-6">{t('contact', 'eyebrow')}</p>
           <h1 className="text-5xl md:text-6xl font-light text-white leading-tight tracking-tight mb-8">
-            Contact Investor<br />Relations
+            {t('contact', 'h1_line1')}<br />{t('contact', 'h1_line2')}
           </h1>
           <p className="text-[#94A3B8] text-lg leading-relaxed max-w-2xl">
-            For qualified investor inquiries, access applications, and institutional correspondence.
+            {t('contact', 'intro')}
           </p>
         </div>
       </section>
@@ -60,11 +69,11 @@ export default function Contact() {
           <div className="grid lg:grid-cols-2 gap-16">
             {/* Contact Info */}
             <div className="space-y-8">
-              <SectionHeading eyebrow="Reach Us" title="Direct institutional contact." />
+              <SectionHeading eyebrow={t('contact', 'reach_eyebrow')} title={t('contact', 'reach_title')} />
 
               <div className="space-y-5">
                 <div className="arka-card p-5 space-y-1">
-                  <p className="text-[9px] tracking-[0.3em] uppercase text-[#94A3B8]">Investor Relations Email</p>
+                  <p className="text-[9px] tracking-[0.3em] uppercase text-[#94A3B8]">{t('contact', 'email_label')}</p>
                   <a
                     href={`mailto:${SITE.email}`}
                     className="text-white hover:text-[#94A3B8] transition-colors text-base"
@@ -74,29 +83,27 @@ export default function Contact() {
                 </div>
 
                 <div className="arka-card p-5 space-y-1">
-                  <p className="text-[9px] tracking-[0.3em] uppercase text-[#94A3B8]">Investor Portal</p>
+                  <p className="text-[9px] tracking-[0.3em] uppercase text-[#94A3B8]">{t('contact', 'portal_label')}</p>
                   <a
                     href={SITE.investorPortal}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-white hover:text-[#94A3B8] transition-colors text-base"
                   >
-                    {SITE.investorPortal}
+                    {SITE.portalDomain}
                   </a>
                 </div>
 
                 <div className="arka-card p-5 space-y-1">
-                  <p className="text-[9px] tracking-[0.3em] uppercase text-[#94A3B8]">Legal / Operating Entity</p>
+                  <p className="text-[9px] tracking-[0.3em] uppercase text-[#94A3B8]">{t('contact', 'entity_label')}</p>
                   <p className="text-white text-sm">ARKA Global Liquidity LTD</p>
-                  <p className="text-[#94A3B8] text-xs">For legal correspondence and contract inquiries</p>
+                  <p className="text-[#94A3B8] text-xs">{t('contact', 'entity_sub')}</p>
                 </div>
               </div>
 
               <div className="p-4 arka-card">
                 <p className="text-[10px] text-[#94A3B8] leading-relaxed">
-                  ARKA does not accept unsolicited investment proposals, media inquiries, or
-                  partnership requests through this form. All contact is subject to confidentiality
-                  obligations consistent with ARKA's institutional framework.
+                  {t('contact', 'note')}
                 </p>
               </div>
             </div>
@@ -107,19 +114,14 @@ export default function Contact() {
                 <div className="w-12 h-12 rounded-full border border-[#1E293B] flex items-center justify-center">
                   <span className="text-white text-xl">✓</span>
                 </div>
-                <h3 className="text-white font-medium text-xl">Message Received</h3>
+                <h3 className="text-white font-medium text-xl">{t('contact', 'received_title')}</h3>
                 <p className="text-[#94A3B8] text-sm">
-                  We will respond within 2–3 business days.
+                  {t('contact', 'received_body')}
                 </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
-                {[
-                  { id: 'name',    label: 'Full Name',             type: 'text',  required: true  },
-                  { id: 'email',   label: 'Email Address',          type: 'email', required: true  },
-                  { id: 'entity',  label: 'Entity / Organization',  type: 'text',  required: false },
-                  { id: 'country', label: 'Country',                type: 'text',  required: true  },
-                ].map(({ id, label, type, required }) => (
+                {FIELDS.map(({ id, label, type, required }) => (
                   <div key={id} className="space-y-1.5">
                     <label htmlFor={id} className="block text-[10px] tracking-[0.25em] uppercase text-[#94A3B8]">
                       {label}{required && ' *'}
@@ -137,21 +139,21 @@ export default function Contact() {
 
                 <div className="space-y-1.5">
                   <label htmlFor="investor_type" className="block text-[10px] tracking-[0.25em] uppercase text-[#94A3B8]">
-                    Investor Type
+                    {t('contact', 'f_investor_type')}
                   </label>
                   <select
                     id="investor_type"
                     name="investor_type"
                     className="w-full bg-[#0D1320] border border-[#1E293B] text-white text-sm px-4 py-3 rounded focus:outline-none focus:border-[#334155] transition-colors"
                   >
-                    <option value="">Select type</option>
-                    {INVESTOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    <option value="">{t('contact', 'f_investor_type_ph')}</option>
+                    {INVESTOR_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
                   </select>
                 </div>
 
                 <div className="space-y-1.5">
                   <label htmlFor="message" className="block text-[10px] tracking-[0.25em] uppercase text-[#94A3B8]">
-                    Message *
+                    {t('contact', 'f_message')} *
                   </label>
                   <textarea
                     id="message"
@@ -159,7 +161,7 @@ export default function Contact() {
                     rows={5}
                     required
                     className="w-full bg-[#0D1320] border border-[#1E293B] text-white text-sm px-4 py-3 rounded focus:outline-none focus:border-[#334155] transition-colors resize-none placeholder-[#94A3B8]/40"
-                    placeholder="Describe your inquiry..."
+                    placeholder={t('contact', 'f_message_ph')}
                   />
                 </div>
 
@@ -174,7 +176,7 @@ export default function Contact() {
                   disabled={loading}
                   className="w-full py-4 bg-[#004C45] text-white text-[11px] tracking-[0.2em] uppercase font-medium hover:bg-[#005c54] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 rounded"
                 >
-                  {loading ? 'Sending…' : 'Send Message'}
+                  {loading ? t('contact', 'submitting') : t('contact', 'submit')}
                 </button>
               </form>
             )}
