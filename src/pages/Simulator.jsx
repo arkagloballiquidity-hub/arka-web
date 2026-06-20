@@ -17,6 +17,18 @@ function blended(f, g, a) {
   return (f * RATES.foundation + g * RATES.growth + a * RATES.alpha) / 100
 }
 
+// Risk-tier colors (shared with the Profiler) — derived from the blended rate,
+// so the accent always reflects the current allocation's risk level.
+const RISK_COLORS = ['#5E97C2', '#46B58F', '#C9A352', '#E0A03C', '#9B6FD4']
+function riskColor(f, g, a) {
+  const rate = blended(f, g, a) * 100
+  if (rate <= 20)   return RISK_COLORS[0]
+  if (rate <= 23)   return RISK_COLORS[1]
+  if (rate <= 27.5) return RISK_COLORS[2]
+  if (rate <= 33)   return RISK_COLORS[3]
+  return RISK_COLORS[4]
+}
+
 // Days per month (standard, no leap year adjustment for simulation purposes)
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
@@ -105,7 +117,7 @@ const PALETTE = {
 }
 
 // ── SVG Line Chart ───────────────────────────────────────────────────────────
-function LineChart({ rows }) {
+function LineChart({ rows, accent = PALETTE.arka }) {
   const W = 800, H = 290
   const PAD = { top: 24, right: 20, bottom: 52, left: 76 }
   const iW  = W - PAD.left - PAD.right
@@ -121,7 +133,7 @@ function LineChart({ rows }) {
     rows.map((r, i) => `${i === 0 ? 'M' : 'L'}${sx(r.year).toFixed(1)},${sy(r[key]).toFixed(1)}`).join(' ')
 
   const LINES = [
-    { key: 'arka',  color: PALETTE.arka,  w: 2.5, label: 'ARKA' },
+    { key: 'arka',  color: accent,        w: 2.5, label: 'ARKA' },
     { key: 'sp500', color: PALETTE.sp500, w: 1.6, label: 'S&P 500' },
     { key: 'cetes', color: PALETTE.cetes, w: 1.4, label: 'CETES' },
     { key: 'bank',  color: PALETTE.bank,  w: 1.2, label: 'Banking' },
@@ -133,8 +145,8 @@ function LineChart({ rows }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#C9A352" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#C9A352" stopOpacity="0" />
+          <stop offset="0%"   stopColor={accent} stopOpacity="0.18" />
+          <stop offset="100%" stopColor={accent} stopOpacity="0" />
         </linearGradient>
       </defs>
 
@@ -296,9 +308,12 @@ export default function Simulator() {
     try {
       const saved = sessionStorage.getItem('arka_profiler_alloc')
       if (saved) {
-        const { f: pf, g: pg, a: pa, id } = JSON.parse(saved)
+        const { f: pf, g: pg, a: pa } = JSON.parse(saved)
         setF(pf); setG(pg); setA(pa)
-        setPreset(id || 'custom')
+        // Only highlight a preset when the recommended mix matches it exactly;
+        // otherwise show it as custom so the bar reflects the real allocation.
+        const match = PRESETS.find(x => x.f === pf && x.g === pg && x.a === pa)
+        setPreset(match ? match.id : 'custom')
         sessionStorage.removeItem('arka_profiler_alloc')
       }
     } catch {}
@@ -312,6 +327,10 @@ export default function Simulator() {
   const handleF = v => { const rem = 100 - v; const ratio = g + a > 0 ? g / (g + a) : 0.5; setF(v); setG(Math.round(rem * ratio)); setA(100 - v - Math.round(rem * ratio)); setPreset('custom') }
   const handleG = v => { const rem = 100 - v; const ratio = f + a > 0 ? f / (f + a) : 0.5; setG(v); setF(Math.round(rem * ratio)); setA(100 - v - Math.round(rem * ratio)); setPreset('custom') }
   const handleA = v => { const rem = 100 - v; const ratio = f + g > 0 ? f / (f + g) : 0.5; setA(v); setF(Math.round(rem * ratio)); setG(100 - v - Math.round(rem * ratio)); setPreset('custom') }
+
+  // Accent color — always reflects the current allocation's risk tier,
+  // so it updates live when presets or sliders change.
+  const accent = riskColor(f, g, a)
 
   const { rows, annual } = useMemo(
     () => calcProjection({ initial, monthly, years, f, g, a, compound }),
@@ -358,9 +377,11 @@ export default function Simulator() {
       capital: 'Initial Capital',
       monthly: 'Monthly Contribution',
       horizon: 'Investment Horizon',
-      mode: 'Compounding Mode',
-      compound: 'Compound',
-      simple: 'Simple',
+      mode: 'Your gains',
+      compound: 'Reinvest',
+      simple: 'Withdraw',
+      help_compound: 'Reinvest: your gains are added to your capital.',
+      help_simple: 'Withdraw: you receive your gains each month.',
       allocation: 'Strategy Allocation',
       foundation: 'Foundation',
       growth: 'Strategic Growth',
@@ -387,9 +408,11 @@ export default function Simulator() {
       capital: 'Capital Inicial',
       monthly: 'Aportación Mensual',
       horizon: 'Horizonte de Inversión',
-      mode: 'Modo de Capitalización',
-      compound: 'Compuesta',
-      simple: 'Simple',
+      mode: 'Tus ganancias',
+      compound: 'Reinvertir',
+      simple: 'Retirar',
+      help_compound: 'Reinvertir: tus ganancias se suman al capital.',
+      help_simple: 'Retirar: recibes tus ganancias cada mes.',
       allocation: 'Asignación de Estrategias',
       foundation: 'Fundación',
       growth: 'Crecimiento Estratégico',
@@ -460,6 +483,10 @@ export default function Simulator() {
                       {v ? tx.compound : tx.simple}
                     </button>
                   ))}
+                </div>
+                <div className="space-y-0.5 pt-1">
+                  <p className="text-[10px] text-white/40 leading-relaxed">{tx.help_compound}</p>
+                  <p className="text-[10px] text-white/40 leading-relaxed">{tx.help_simple}</p>
                 </div>
               </div>
 
@@ -535,7 +562,7 @@ export default function Simulator() {
                     <p className="text-[10px] tracking-[0.22em] uppercase text-white/50">{label}</p>
                     <p className="font-light tabular-nums leading-tight text-[clamp(0.9rem,1.9vw,1.2rem)]">
                       {isGold
-                        ? <GoldValue>{value}</GoldValue>
+                        ? <span style={{ color: accent }} className="tabular-nums">{value}</span>
                         : <GradientValue>{value}</GradientValue>
                       }
                     </p>
@@ -546,7 +573,7 @@ export default function Simulator() {
 
               {/* Chart */}
               <div className="rounded-xl border border-white/8 bg-white/[0.03] p-5 overflow-hidden">
-                <LineChart rows={rows} />
+                <LineChart rows={rows} accent={accent} />
               </div>
 
               {/* Market Context */}
@@ -590,7 +617,7 @@ export default function Simulator() {
               <div className="rounded-xl border border-white/8 bg-white/[0.03] p-5 space-y-4">
                 <p className="text-[10px] tracking-[0.28em] uppercase text-white/55 mb-5">{tx.vs}</p>
                 {[
-                  { label: 'ARKA',    value: finalRow.arka,  color: PALETTE.arka,  rate: pct(annual) },
+                  { label: 'ARKA',    value: finalRow.arka,  color: accent,        rate: pct(annual) },
                   { label: 'S&P 500', value: finalRow.sp500, color: PALETTE.sp500, rate: `${(BENCH.sp500 * 100).toFixed(1)}% / yr` },
                   { label: 'CETES',   value: finalRow.cetes, color: PALETTE.cetes, rate: `${(BENCH.cetes * 100).toFixed(1)}% / yr` },
                   { label: lang === 'es' ? 'Banca Trad.' : 'Trad. Banking', value: finalRow.bank, color: PALETTE.bank, rate: `${(BENCH.bank * 100).toFixed(1)}% / yr` },

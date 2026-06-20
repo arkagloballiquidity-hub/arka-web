@@ -168,6 +168,7 @@ const QUESTIONS = [
 function getProfile(score) {
   if (score <= 65) return {
     id: 'conservative',
+    color: '#5E97C2',
     en: { name: 'Conservative', desc: 'Capital preservation is your priority. You prefer predictable, stable growth with minimal volatility. ARKA Foundation Strategy aligns best with your profile.' },
     es: { name: 'Conservador',  desc: 'La preservación de capital es tu prioridad. Prefieres crecimiento predecible y estable con mínima volatilidad. La Estrategia Fundación ARKA se alinea mejor con tu perfil.' },
     strategy: 'ARKA Foundation Strategy', rate: '18%',
@@ -177,6 +178,7 @@ function getProfile(score) {
   }
   if (score <= 115) return {
     id: 'moderate',
+    color: '#46B58F',
     en: { name: 'Moderate', desc: 'You seek balanced growth with managed risk. You can tolerate moderate volatility in exchange for consistent capital appreciation. A blend of Foundation and Strategic Growth suits you.' },
     es: { name: 'Moderado',  desc: 'Buscas crecimiento equilibrado con riesgo gestionado. Puedes tolerar volatilidad moderada a cambio de apreciación de capital consistente. Una combinación de Fundación y Crecimiento Estratégico te conviene.' },
     strategy: 'Foundation + Strategic Growth', rate: '21%',
@@ -186,6 +188,7 @@ function getProfile(score) {
   }
   if (score <= 155) return {
     id: 'balanced',
+    color: '#C9A352',
     en: { name: 'Balanced Growth', desc: 'You combine discipline with ambition. You are comfortable with measured volatility and seek meaningful capital growth over time. A diversified multi-strategy allocation suits your profile.' },
     es: { name: 'Crecimiento Equilibrado', desc: 'Combinas disciplina con ambición. Te sientes cómodo con volatilidad medida y buscas crecimiento de capital significativo. Una asignación multi-estrategia diversificada se adapta a tu perfil.' },
     strategy: 'Multi-Strategy Blend', rate: '26%',
@@ -193,14 +196,25 @@ function getProfile(score) {
     gradient: 'from-white to-[#C9A352]',
     barColors: { foundation: 'rgba(255,255,255,0.5)', growth: '#C9A352', alpha: 'rgba(255,255,255,0.3)' },
   }
-  return {
+  if (score <= 178) return {
     id: 'dynamic',
+    color: '#E0A03C',
     en: { name: 'Dynamic', desc: 'You pursue superior risk-adjusted returns and are comfortable with active market exposure. ARKA Alpha Force and a growth-tilted allocation align with your high-performance profile.' },
     es: { name: 'Dinámico',  desc: 'Buscas retornos superiores ajustados al riesgo y te sientes cómodo con exposición activa al mercado. ARKA Alpha Force y una asignación orientada al crecimiento se alinean con tu perfil.' },
     strategy: 'ARKA Alpha Force + Growth', rate: '32%',
     alloc: { foundation: 10, growth: 35, alpha: 55 },
     gradient: 'from-[#C9A352] via-white to-white',
     barColors: { foundation: 'rgba(255,255,255,0.35)', growth: '#C9A352', alpha: 'rgba(255,255,255,0.65)' },
+  }
+  return {
+    id: 'aggressive',
+    color: '#9B6FD4',
+    en: { name: 'Aggressive', desc: 'You pursue maximum return and full market exposure, accepting the highest volatility for the greatest growth potential. A full allocation to ARKA Alpha Force aligns with your maximum-risk profile.' },
+    es: { name: 'Agresivo',  desc: 'Buscas el máximo rendimiento y exposición total al mercado, aceptando la mayor volatilidad a cambio del mayor potencial de crecimiento. Una asignación completa a ARKA Alpha Force se alinea con tu perfil de riesgo máximo.' },
+    strategy: 'ARKA Alpha Force', rate: '36%',
+    alloc: { foundation: 0, growth: 0, alpha: 100 },
+    gradient: 'from-[#C9A352] to-white',
+    barColors: { foundation: 'rgba(255,255,255,0.25)', growth: 'rgba(255,255,255,0.4)', alpha: '#C9A352' },
   }
 }
 
@@ -472,14 +486,21 @@ export default function Profiler() {
                 className="space-y-10">
 
                 {/* Profile badge */}
-                <div className="text-center space-y-5 py-8 border-b border-white/[0.07]">
-                  <p className="text-[10px] tracking-[0.45em] uppercase text-white/45">{tx.result_title}</p>
-                  <h2 className="text-[clamp(2.2rem,6vw,4rem)] font-light tracking-tight">
-                    <GradientText gradient={profile.gradient}>{pData.name}</GradientText>
-                  </h2>
-                  <p className="text-white/72 text-base md:text-lg leading-relaxed max-w-lg mx-auto">
-                    {pData.desc}
-                  </p>
+                <div className="relative text-center py-8 border-b border-white/[0.07] overflow-hidden">
+                  <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full"
+                    style={{ backgroundColor: profile.color, filter: 'blur(90px)', opacity: 0.18 }} />
+                  <div className="relative space-y-5">
+                    <p className="inline-flex items-center gap-2.5 text-[10px] tracking-[0.45em] uppercase text-white/45">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: profile.color }} />
+                      {tx.result_title}
+                    </p>
+                    <h2 className="text-[clamp(2.2rem,6vw,4rem)] font-light tracking-tight" style={{ color: profile.color }}>
+                      {pData.name}
+                    </h2>
+                    <p className="text-white/72 text-base md:text-lg leading-relaxed max-w-lg mx-auto">
+                      {pData.desc}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Stats grid */}
@@ -493,7 +514,7 @@ export default function Profiler() {
                       <p className="text-[9px] tracking-[0.25em] uppercase text-white/45">{label}</p>
                       <p className="font-light text-sm md:text-base leading-tight">
                         {isGold
-                          ? <span className="bg-gradient-to-r from-[#C9A352] to-[#E8C87A] bg-clip-text text-transparent">{value}</span>
+                          ? <span style={{ color: profile.color }}>{value}</span>
                           : <span className="text-white/85">{value}</span>
                         }
                       </p>
@@ -522,7 +543,7 @@ export default function Profiler() {
                           initial={{ width: 0 }}
                           animate={{ width: `${val}%` }}
                           transition={{ duration: 0.7, delay: 0.2 }}
-                          style={{ backgroundColor: profile.barColors[key] }}
+                          style={{ backgroundColor: profile.color, opacity: key === 'foundation' ? 0.55 : key === 'growth' ? 0.78 : 1 }}
                         />
                       </div>
                     </div>
