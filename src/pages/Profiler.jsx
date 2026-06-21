@@ -198,7 +198,7 @@ function getProfile(score) {
   }
   if (score <= 178) return {
     id: 'dynamic',
-    color: '#E0A03C',
+    color: '#E0705A',
     en: { name: 'Dynamic', desc: 'You pursue superior risk-adjusted returns and are comfortable with active market exposure. ARKA Alpha Force and a growth-tilted allocation align with your high-performance profile.' },
     es: { name: 'Dinámico',  desc: 'Buscas retornos superiores ajustados al riesgo y te sientes cómodo con exposición activa al mercado. ARKA Alpha Force y una asignación orientada al crecimiento se alinean con tu perfil.' },
     strategy: 'ARKA Alpha Force + Growth', rate: '32%',

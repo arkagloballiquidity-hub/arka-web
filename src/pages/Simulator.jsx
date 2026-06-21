@@ -19,7 +19,7 @@ function blended(f, g, a) {
 
 // Risk-tier colors (shared with the Profiler) — derived from the blended rate,
 // so the accent always reflects the current allocation's risk level.
-const RISK_COLORS = ['#5E97C2', '#46B58F', '#C9A352', '#E0A03C', '#9B6FD4']
+const RISK_COLORS = ['#5E97C2', '#46B58F', '#C9A352', '#E0705A', '#9B6FD4']
 function riskColor(f, g, a) {
   const rate = blended(f, g, a) * 100
   if (rate <= 20)   return RISK_COLORS[0]
