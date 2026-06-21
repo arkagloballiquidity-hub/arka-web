@@ -5,7 +5,19 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const SITE   = process.env.SITE_URL || 'https://arka-web-six.vercel.app'
+const SITE   = process.env.SITE_URL || 'https://www.arkaglobalinvestments.com'
+const CONTACT_EMAIL = 'contacto@arkaltd.io'
+
+// Risk-tier accent colors (shared with the site + profiler email)
+const RISK_COLORS = ['#5E97C2', '#46B58F', '#C9A352', '#E0705A', '#9B6FD4']
+function riskColor(f, g, a) {
+  const rate = (f * 0.18 + g * 0.24 + a * 0.36) / 100 * 100
+  if (rate <= 20)   return RISK_COLORS[0]
+  if (rate <= 23)   return RISK_COLORS[1]
+  if (rate <= 27.5) return RISK_COLORS[2]
+  if (rate <= 33)   return RISK_COLORS[3]
+  return RISK_COLORS[4]
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 let montserratBoldBytes, montserratRegBytes, montserratLightBytes, logoPngBytes
@@ -129,6 +141,7 @@ export default async function handler(req, res) {
 
 // ── Email template ────────────────────────────────────────────────────────────
 function buildEmail({ firstName, params, results, rows }) {
+  const accent = riskColor(params.f, params.g, params.a)
   const paramRows = [
     ['Initial Capital',      fmtUSD(params.initial)],
     ['Monthly Contribution', fmtUSD(params.monthly)],
@@ -180,7 +193,7 @@ function buildEmail({ firstName, params, results, rows }) {
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td style="padding:28px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;text-align:center">
         <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#555;margin:0 0 10px">Projected Capital</p>
-        <p style="font-size:36px;font-weight:700;color:#C9A352;margin:0;letter-spacing:-.5px">${fmtUSD(results.finalCapital)}</p>
+        <p style="font-size:36px;font-weight:700;color:${accent};margin:0;letter-spacing:-.5px">${fmtUSD(results.finalCapital)}</p>
         <p style="font-size:10px;color:#555;margin:8px 0 0">after ${params.years} year${params.years !== 1 ? 's' : ''}</p>
       </td></tr>
     </table>
@@ -197,7 +210,7 @@ function buildEmail({ firstName, params, results, rows }) {
         <td style="width:2%"></td>
         <td style="width:49%;padding:18px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
           <p style="font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:#555;margin:0 0 8px">Net Gain</p>
-          <p style="font-size:18px;font-weight:300;color:#ccc;margin:0">${fmtUSD(results.netGain)} <span style="font-size:12px;color:#C9A352">×${results.multiplier}</span></p>
+          <p style="font-size:18px;font-weight:300;color:#ccc;margin:0">${fmtUSD(results.netGain)} <span style="font-size:12px;color:${accent}">×${results.multiplier}</span></p>
         </td>
       </tr>
     </table>
@@ -221,7 +234,7 @@ function buildEmail({ firstName, params, results, rows }) {
       <tr>
         <td style="width:49%;padding:20px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
           <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">US Market Participation</p>
-          <p style="font-size:28px;font-weight:700;color:#C9A352;margin:0">55%</p>
+          <p style="font-size:28px;font-weight:700;color:${accent};margin:0">55%</p>
           <p style="font-size:9px;color:#555;margin:8px 0 0;line-height:1.6">of Americans invest in financial markets</p>
         </td>
         <td style="width:2%"></td>
@@ -241,7 +254,7 @@ function buildEmail({ firstName, params, results, rows }) {
   <tr><td style="padding:28px 0;border-top:1px solid #1a1a1a">
     <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#3a3a3a;margin:0 0 20px">Final Value vs Benchmarks</p>
     ${[
-      { label: 'ARKA',    value: final.arka,  color: '#C9A352', bold: true  },
+      { label: 'ARKA',    value: final.arka,  color: accent,    bold: true  },
       { label: 'S&amp;P 500', value: final.sp500, color: '#94A3B8', bold: false },
       { label: 'CETES',   value: final.cetes, color: '#64748B', bold: false },
       { label: 'Banking', value: final.bank,  color: '#475569', bold: false },
@@ -273,7 +286,7 @@ function buildEmail({ firstName, params, results, rows }) {
       </tr>
       ${tableRows.map((r, i) => `<tr style="background:${i % 2 === 0 ? '#0d0d0d' : 'transparent'}">
         <td style="padding:8px 10px;font-size:10px;color:#666;font-family:monospace">Yr ${r.year}</td>
-        <td style="padding:8px 10px;font-size:10px;color:#C9A352;font-weight:600">${fmtUSD(r.arka)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:${accent};font-weight:600">${fmtUSD(r.arka)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#777">${fmtUSD(r.sp500)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#666">${fmtUSD(r.cetes)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#555">${fmtUSD(r.contributed)}</td>
@@ -284,9 +297,10 @@ function buildEmail({ firstName, params, results, rows }) {
   <!-- CTA -->
   <tr><td style="padding:32px 0;text-align:center;border-top:1px solid #1a1a1a">
     <p style="font-size:13px;color:#666;margin:0 0 20px;line-height:1.8">Ready to put your capital to work?</p>
-    <a href="${SITE}/access" style="display:inline-block;background:#004C45;color:#fff;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 36px;border-radius:2px">
-      Apply for Access
+    <a href="${SITE}/contact" style="display:inline-block;background:#004C45;color:#fff;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 36px;border-radius:2px">
+      Contact Us
     </a>
+    <p style="font-size:11px;color:#666;margin:18px 0 0">Or email us at <a href="mailto:${CONTACT_EMAIL}" style="color:${accent};text-decoration:none">${CONTACT_EMAIL}</a></p>
   </td></tr>
 
   <!-- Footer -->

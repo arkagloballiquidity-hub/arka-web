@@ -5,7 +5,19 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const SITE   = process.env.SITE_URL || 'https://arka-web-six.vercel.app'
+const SITE   = process.env.SITE_URL || 'https://www.arkaglobalinvestments.com'
+const CONTACT_EMAIL = 'contacto@arkaltd.io'
+
+// Risk-tier accent colors (shared with the site + simulator email)
+const RISK_COLORS = ['#5E97C2', '#46B58F', '#C9A352', '#E0705A', '#9B6FD4']
+function riskColor(f, g, a) {
+  const rate = (f * 0.18 + g * 0.24 + a * 0.36) / 100 * 100
+  if (rate <= 20)   return RISK_COLORS[0]
+  if (rate <= 23)   return RISK_COLORS[1]
+  if (rate <= 27.5) return RISK_COLORS[2]
+  if (rate <= 33)   return RISK_COLORS[3]
+  return RISK_COLORS[4]
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 let montserratBoldBytes, montserratRegBytes, montserratLightBytes, logoPngBytes
@@ -80,10 +92,11 @@ export default async function handler(req, res) {
 // ── Email template ────────────────────────────────────────────────────────────
 function buildEmail({ firstName, profile }) {
   const alloc = profile.alloc || {}
+  const accent = riskColor(alloc.foundation || 0, alloc.growth || 0, alloc.alpha || 0)
   const allocBars = [
-    { label: 'Foundation',       val: alloc.foundation || 0, rate: '18%', color: '#C9A352' },
-    { label: 'Strategic Growth', val: alloc.growth     || 0, rate: '24%', color: '#A08040' },
-    { label: 'Alpha Force',      val: alloc.alpha      || 0, rate: '36%', color: '#7a6030' },
+    { label: 'Foundation',       val: alloc.foundation || 0, rate: '18%', color: accent },
+    { label: 'Strategic Growth', val: alloc.growth     || 0, rate: '24%', color: accent },
+    { label: 'Alpha Force',      val: alloc.alpha      || 0, rate: '36%', color: accent },
   ]
 
   return `<!DOCTYPE html>
@@ -122,9 +135,9 @@ function buildEmail({ firstName, profile }) {
   <!-- Profile card -->
   <tr><td style="padding:0 0 20px">
     <table width="100%" cellpadding="0" cellspacing="0">
-      <tr><td style="padding:28px 24px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;text-align:center;border-left:3px solid #C9A352">
+      <tr><td style="padding:28px 24px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;text-align:center;border-left:3px solid ${accent}">
         <p style="font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:#444;margin:0 0 12px">Your Investor Profile</p>
-        <p style="font-size:30px;font-weight:700;color:#C9A352;margin:0 0 14px;letter-spacing:.02em">${esc(profile.name)}</p>
+        <p style="font-size:30px;font-weight:700;color:${accent};margin:0 0 14px;letter-spacing:.02em">${esc(profile.name)}</p>
         <p style="font-size:13px;color:#666;margin:0;line-height:1.7">${esc(profile.desc || '')}</p>
       </td></tr>
     </table>
@@ -136,12 +149,12 @@ function buildEmail({ firstName, profile }) {
       <tr>
         <td style="width:32%;padding:16px 12px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
           <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">Score</p>
-          <p style="font-size:17px;font-weight:700;color:#C9A352;margin:0">${profile.score} / 200</p>
+          <p style="font-size:17px;font-weight:700;color:${accent};margin:0">${profile.score} / 200</p>
         </td>
         <td style="width:2%"></td>
         <td style="width:32%;padding:16px 12px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
           <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">Target Rate</p>
-          <p style="font-size:17px;font-weight:700;color:#C9A352;margin:0">${esc(profile.rate)}</p>
+          <p style="font-size:17px;font-weight:700;color:${accent};margin:0">${esc(profile.rate)}</p>
         </td>
         <td style="width:2%"></td>
         <td style="width:32%;padding:16px 12px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
@@ -159,7 +172,7 @@ function buildEmail({ firstName, profile }) {
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
       <tr>
         <td style="font-size:11px;color:#999;padding-bottom:6px;width:70%">${b.label} <span style="color:#444;font-size:10px">(${b.rate})</span></td>
-        <td style="font-size:11px;color:#C9A352;text-align:right;padding-bottom:6px;width:30%">${b.val}%</td>
+        <td style="font-size:11px;color:${accent};text-align:right;padding-bottom:6px;width:30%">${b.val}%</td>
       </tr>
       <tr><td colspan="2" style="padding:0">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -175,12 +188,13 @@ function buildEmail({ firstName, profile }) {
     <p style="font-size:13px;color:#666;margin:0 0 20px;line-height:1.8">Your profile is the first step toward institutional-grade returns.</p>
     <table cellpadding="0" cellspacing="0" style="margin:0 auto"><tr>
       <td style="padding-right:10px">
-        <a href="${SITE}/access" style="display:inline-block;background:#004C45;color:#fff;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 28px;border-radius:2px">Apply for Access</a>
+        <a href="${SITE}/contact" style="display:inline-block;background:#004C45;color:#fff;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 28px;border-radius:2px">Contact Us</a>
       </td>
       <td>
-        <a href="${SITE}/simulator" style="display:inline-block;border:1px solid #2a2a2a;color:#777;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 28px;border-radius:2px">Run Simulation</a>
+        <a href="${SITE}/simulator?f=${alloc.foundation || 0}&g=${alloc.growth || 0}&a=${alloc.alpha || 0}" style="display:inline-block;border:1px solid #2a2a2a;color:#777;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 28px;border-radius:2px">Run Simulation</a>
       </td>
     </tr></table>
+    <p style="font-size:11px;color:#666;margin:18px 0 0">Or email us at <a href="mailto:${CONTACT_EMAIL}" style="color:${accent};text-decoration:none">${CONTACT_EMAIL}</a></p>
   </td></tr>
 
   <!-- Footer -->

@@ -306,17 +306,31 @@ export default function Simulator() {
   const [senderEmail, setSenderEmail] = useState('')
   const [sendStatus,  setSendStatus]  = useState('idle') // idle | sending | sent | error
 
-  // Load profiler allocation if coming from Profiler page
+  // Load a recommended allocation — from URL params (email link) or sessionStorage (in-app)
   useEffect(() => {
+    const applyAlloc = (pf, pg, pa) => {
+      setF(pf); setG(pg); setA(pa)
+      // Only highlight a preset when the recommended mix matches it exactly;
+      // otherwise show it as custom so the bar reflects the real allocation.
+      const match = PRESETS.find(x => x.f === pf && x.g === pg && x.a === pa)
+      setPreset(match ? match.id : 'custom')
+    }
     try {
+      // 1. URL query params (e.g. the "Run Simulation" link in the profile email)
+      const q = new URLSearchParams(window.location.search)
+      const qf = q.get('f'), qg = q.get('g'), qa = q.get('a')
+      if (qf !== null && qg !== null && qa !== null) {
+        const pf = Math.round(+qf), pg = Math.round(+qg), pa = Math.round(+qa)
+        if ([pf, pg, pa].every(Number.isFinite) && pf + pg + pa > 0) {
+          applyAlloc(pf, pg, pa)
+          return
+        }
+      }
+      // 2. sessionStorage (in-app navigation from the Profiler)
       const saved = sessionStorage.getItem('arka_profiler_alloc')
       if (saved) {
         const { f: pf, g: pg, a: pa } = JSON.parse(saved)
-        setF(pf); setG(pg); setA(pa)
-        // Only highlight a preset when the recommended mix matches it exactly;
-        // otherwise show it as custom so the bar reflects the real allocation.
-        const match = PRESETS.find(x => x.f === pf && x.g === pg && x.a === pa)
-        setPreset(match ? match.id : 'custom')
+        applyAlloc(pf, pg, pa)
         sessionStorage.removeItem('arka_profiler_alloc')
       }
     } catch {}
