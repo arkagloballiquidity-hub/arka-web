@@ -9,18 +9,19 @@ export default function Contact() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const INVESTOR_TYPES = [
-    t('contact', 'type_individual'),
-    t('contact', 'type_family'),
-    t('contact', 'type_entrepreneur'),
-    t('contact', 'type_hnwi'),
-    t('contact', 'type_institutional'),
-    t('contact', 'type_other'),
+  const AMOUNTS = [
+    t('contact', 'amount_1'),
+    t('contact', 'amount_2'),
+    t('contact', 'amount_3'),
+    t('contact', 'amount_4'),
+    t('contact', 'amount_5'),
+    t('contact', 'amount_6'),
   ]
 
   const FIELDS = [
     { id: 'name',    label: t('contact', 'f_name'),    type: 'text',  required: true  },
     { id: 'email',   label: t('contact', 'f_email'),   type: 'email', required: true  },
+    { id: 'phone',   label: t('contact', 'f_phone'),   type: 'tel',   required: true  },
     { id: 'entity',  label: t('contact', 'f_entity'),  type: 'text',  required: false },
     { id: 'country', label: t('contact', 'f_country'), type: 'text',  required: true  },
   ]
@@ -138,16 +139,16 @@ export default function Contact() {
                 ))}
 
                 <div className="space-y-1.5">
-                  <label htmlFor="investor_type" className="block text-[10px] tracking-[0.25em] uppercase text-[#94A3B8]">
-                    {t('contact', 'f_investor_type')}
+                  <label htmlFor="amount" className="block text-[10px] tracking-[0.25em] uppercase text-[#94A3B8]">
+                    {t('contact', 'f_amount')}
                   </label>
                   <select
-                    id="investor_type"
-                    name="investor_type"
+                    id="amount"
+                    name="amount"
                     className="w-full bg-[#0D1320] border border-[#1E293B] text-white text-sm px-4 py-3 rounded focus:outline-none focus:border-[#334155] transition-colors"
                   >
-                    <option value="">{t('contact', 'f_investor_type_ph')}</option>
-                    {INVESTOR_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                    <option value="">{t('contact', 'f_amount_ph')}</option>
+                    {AMOUNTS.map((a) => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
 

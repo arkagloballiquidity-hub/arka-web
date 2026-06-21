@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST')   return res.status(405).end()
 
-  const { name, email, entity, country, investor_type, message } = req.body || {}
+  const { name, email, phone, entity, country, amount, message } = req.body || {}
 
   if (!name || !email || !message)
     return res.status(400).json({ error: 'Missing required fields' })
@@ -61,6 +61,14 @@ export default async function handler(req, res) {
 
   <tr><td style="padding:0 0 24px">
     <table width="100%" cellpadding="0" cellspacing="0">
+      ${phone ? `<tr>
+        <td style="padding:8px 0;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#444;width:40%">Phone / WhatsApp</td>
+        <td style="padding:8px 0;font-size:13px;color:#bbb;text-align:right">${esc(phone)}</td>
+      </tr>` : ''}
+      ${amount ? `<tr>
+        <td style="padding:8px 0;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#444;width:40%">Amount to Invest</td>
+        <td style="padding:8px 0;font-size:13px;color:#bbb;text-align:right">${esc(amount)}</td>
+      </tr>` : ''}
       ${entity ? `<tr>
         <td style="padding:8px 0;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#444;width:40%">Entity</td>
         <td style="padding:8px 0;font-size:13px;color:#bbb;text-align:right">${esc(entity)}</td>
@@ -68,10 +76,6 @@ export default async function handler(req, res) {
       ${country ? `<tr>
         <td style="padding:8px 0;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#444">Country</td>
         <td style="padding:8px 0;font-size:13px;color:#bbb;text-align:right">${esc(country)}</td>
-      </tr>` : ''}
-      ${investor_type ? `<tr>
-        <td style="padding:8px 0;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#444">Investor Type</td>
-        <td style="padding:8px 0;font-size:13px;color:#bbb;text-align:right">${esc(investor_type)}</td>
       </tr>` : ''}
     </table>
   </td></tr>
@@ -103,9 +107,10 @@ export default async function handler(req, res) {
     `📩 <b>Nuevo Contacto — ARKA</b>\n\n` +
     `👤 ${esc(name)}\n` +
     `📧 ${esc(email)}\n` +
-    (entity       ? `🏢 ${esc(entity)}\n`        : '') +
-    (country      ? `🌍 ${esc(country)}\n`        : '') +
-    (investor_type ? `🏷 ${esc(investor_type)}\n` : '') +
+    (phone   ? `📱 ${esc(phone)}\n`   : '') +
+    (amount  ? `💰 ${esc(amount)}\n`  : '') +
+    (entity  ? `🏢 ${esc(entity)}\n`  : '') +
+    (country ? `🌍 ${esc(country)}\n` : '') +
     `\n💬 ${esc(message).slice(0, 300)}${message.length > 300 ? '…' : ''}`
   )
 

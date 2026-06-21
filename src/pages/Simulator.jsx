@@ -6,11 +6,14 @@ import { useLang } from '@/context/LanguageContext'
 const RATES = { foundation: 0.18, growth: 0.24, alpha: 0.36 }
 const BENCH = { sp500: 0.108, cetes: 0.097, bank: 0.045 }
 
+// Presets mirror the 5 Profiler risk profiles (same id + allocation), so the
+// recommended profile highlights automatically when arriving from the Profiler.
 const PRESETS = [
-  { id: 'conservative', en: 'Conservative', es: 'Conservadora',  f: 100, g: 0,  a: 0  },
-  { id: 'balanced',     en: 'Balanced',     es: 'Equilibrada',   f: 50,  g: 35, a: 15 },
-  { id: 'growth',       en: 'Growth',       es: 'Crecimiento',   f: 20,  g: 60, a: 20 },
-  { id: 'aggressive',   en: 'Aggressive',   es: 'Agresiva',      f: 0,   g: 40, a: 60 },
+  { id: 'conservative', en: 'Conservative', es: 'Conservador', f: 80, g: 20, a: 0   },
+  { id: 'moderate',     en: 'Moderate',     es: 'Moderado',    f: 50, g: 50, a: 0   },
+  { id: 'balanced',     en: 'Balanced',     es: 'Equilibrado', f: 30, g: 45, a: 25  },
+  { id: 'dynamic',      en: 'Dynamic',      es: 'Dinámico',    f: 10, g: 35, a: 55  },
+  { id: 'aggressive',   en: 'Aggressive',   es: 'Agresivo',    f: 0,  g: 0,  a: 100 },
 ]
 
 function blended(f, g, a) {
@@ -292,9 +295,9 @@ export default function Simulator() {
   const [years,    setYears]    = useState(10)
   const [compound, setCompound] = useState(true)
   const [preset,   setPreset]   = useState('balanced')
-  const [f, setF] = useState(50)
-  const [g, setG] = useState(35)
-  const [a, setA] = useState(15)
+  const [f, setF] = useState(30)
+  const [g, setG] = useState(45)
+  const [a, setA] = useState(25)
   const [showTable,    setShowTable]    = useState(false)
   const [expandedYear, setExpandedYear] = useState(null)
 
@@ -494,11 +497,12 @@ export default function Simulator() {
               <div className="space-y-3">
                 <p className="text-[10px] tracking-[0.28em] uppercase text-white/55">{tx.presets}</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {PRESETS.map(p => (
+                  {PRESETS.map((p, i) => (
                     <button key={p.id} onClick={() => applyPreset(p.id)}
-                      className={`py-2.5 text-[10px] tracking-[0.15em] uppercase border rounded transition-all duration-200 ${
+                      style={preset === p.id ? { borderColor: accent, color: accent, backgroundColor: `${accent}14` } : undefined}
+                      className={`py-2.5 text-[10px] tracking-[0.15em] uppercase border rounded transition-all duration-200 ${i === PRESETS.length - 1 ? 'col-span-2' : ''} ${
                         preset === p.id
-                          ? 'border-white/30 text-white bg-white/8'
+                          ? ''
                           : 'border-white/8 text-white/45 hover:border-white/20 hover:text-white/70'
                       }`}>
                       {lang === 'es' ? p.es : p.en}

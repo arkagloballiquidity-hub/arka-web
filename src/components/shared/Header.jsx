@@ -53,13 +53,13 @@ export default function Header() {
           {/* Tools — internal routes */}
           <Link
             to={TOOLS[0].href}
-            className="text-[10px] tracking-[0.18em] uppercase text-white/45 hover:text-[#C9A352] transition-colors duration-200"
+            className="text-[10px] tracking-[0.18em] uppercase text-[#1E9E84] hover:text-[#2BC79F] transition-colors duration-200"
           >
             {t('nav', 'profiler')}
           </Link>
           <Link
             to={TOOLS[1].href}
-            className="text-[10px] tracking-[0.18em] uppercase text-white/45 hover:text-[#C9A352] transition-colors duration-200"
+            className="text-[10px] tracking-[0.18em] uppercase text-[#1E9E84] hover:text-[#2BC79F] transition-colors duration-200"
           >
             {t('nav', 'simulator')}
           </Link>
