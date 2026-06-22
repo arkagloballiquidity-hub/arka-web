@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const SITE   = process.env.SITE_URL || 'https://www.arkaglobalinvestments.com'
+const SITE   = 'https://www.arkaglobalinvestments.com'
 const CONTACT_EMAIL = 'contacto@arkaltd.io'
 
 // Risk-tier accent colors (shared with the site + simulator email)
