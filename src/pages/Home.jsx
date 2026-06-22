@@ -352,7 +352,9 @@ export default function Home() {
                 </Reveal>
               </div>
               <Reveal delay={0.1}>
-                <p className="text-white/88 text-base leading-relaxed">{t('home','strategies_desc')}</p>
+                <div className="rounded-xl border border-white/10 bg-black/45 backdrop-blur-md p-6 md:p-7">
+                  <p className="text-white/88 text-base leading-relaxed text-justify">{t('home','strategies_desc')}</p>
+                </div>
               </Reveal>
             </div>
 
@@ -391,7 +393,9 @@ export default function Home() {
                   </Reveal>
                 </div>
                 <Reveal delay={0.1}>
-                  <p className="text-white/88 text-base leading-relaxed text-justify">{t('home','risk_desc')}</p>
+                  <div className="rounded-xl border border-white/10 bg-black/45 backdrop-blur-md p-6 md:p-7">
+                    <p className="text-white/88 text-base leading-relaxed text-justify">{t('home','risk_desc')}</p>
+                  </div>
                 </Reveal>
               </div>
 
@@ -437,7 +441,9 @@ export default function Home() {
                   </Reveal>
                 </div>
                 <Reveal delay={0.1}>
-                  <p className="text-white/88 text-base leading-relaxed">{t('home','map_desc')}</p>
+                  <div className="rounded-xl border border-white/10 bg-black/45 backdrop-blur-md p-6 md:p-7">
+                    <p className="text-white/88 text-base leading-relaxed text-justify">{t('home','map_desc')}</p>
+                  </div>
                 </Reveal>
               </div>
             </div>
@@ -484,7 +490,9 @@ export default function Home() {
                 </Reveal>
               </div>
               <Reveal delay={0.1}>
-                <p className="text-white/88 text-base leading-relaxed">{t('home','infra_desc')}</p>
+                <div className="rounded-xl border border-white/10 bg-black/45 backdrop-blur-md p-6 md:p-7">
+                  <p className="text-white/88 text-base leading-relaxed text-justify">{t('home','infra_desc')}</p>
+                </div>
               </Reveal>
             </div>
 
