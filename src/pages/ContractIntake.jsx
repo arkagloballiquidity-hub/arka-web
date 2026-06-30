@@ -70,7 +70,18 @@ function emptyBeneficiary() {
   return { fullName: '', relationship: '', percentage: '', idType: '', idNumber: '', idExpiry: '', contact: '' }
 }
 
+// True only when the page is rendered inside an iframe (e.g. embedded in B2Core).
+// Direct browser navigation to this URL renders the blocked screen below instead.
+function isEmbedded() {
+  try {
+    return window.self !== window.top
+  } catch {
+    return true // cross-origin frame access throws — it's framed by a different origin
+  }
+}
+
 export default function ContractIntake() {
+  const [framed] = useState(isEmbedded)
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
   const [error, setError] = useState('')
@@ -209,6 +220,16 @@ export default function ContractIntake() {
   }
 
   const progressPct = step >= 1 && step <= 6 ? Math.round((step / 6) * 100) : step >= 7 ? 100 : 0
+
+  if (!framed) {
+    return (
+      <main className="min-h-screen bg-[#050505] flex items-center justify-center px-6 text-center">
+        <p className="text-white/40 text-sm max-w-sm">
+          Esta página solo está disponible dentro del portal ARKA.
+        </p>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-[#050505] px-5 sm:px-10 md:px-16 py-12 md:py-16">
