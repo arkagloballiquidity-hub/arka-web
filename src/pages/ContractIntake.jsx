@@ -74,7 +74,7 @@ function Field({ label, required, hint, children }) {
 }
 
 const inputClass =
-  'w-full bg-white/[0.05] border border-white/10 rounded px-4 py-3 text-sm text-white placeholder-white/35 focus:outline-none focus:border-[#005c54] transition-colors'
+  'w-full bg-white/[0.05] border border-white/10 rounded px-4 py-3 text-sm text-white placeholder-white/35 focus:outline-none focus:border-[#005c54] transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
 
 function TextInput({ className = '', ...props }) {
   return <input {...props} className={`${inputClass} ${className}`} />
@@ -120,8 +120,27 @@ function SummarySection({ title, children }) {
   )
 }
 
+const RELATIONSHIPS = [
+  'Cónyuge', 'Hijo/a', 'Padre', 'Madre', 'Hermano/a', 'Abuelo/a', 'Nieto/a', 'Tío/a', 'Sobrino/a', 'Primo/a', 'Otro',
+]
+
 function emptyBeneficiary() {
-  return { fullName: '', relationship: '', percentage: '', phone: '', email: '' }
+  return { fullName: '', relationship: '', relationshipOther: '', percentage: '', phone: '', email: '' }
+}
+
+// Decodes a JWT payload without verifying the signature — used only to prefill the
+// contractual email from the B2Core session. B2Core is the only origin allowed to
+// frame this page (see vercel.json), so the token can be trusted for this purpose.
+function decodeJwtPayload(token) {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const json = decodeURIComponent(
+      atob(base64).split('').map((c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join('')
+    )
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
 }
 
 function formatMoney(n) {
@@ -158,6 +177,35 @@ export default function ContractIntake() {
 
   const [beneficiaries, setBeneficiaries] = useState([{ ...emptyBeneficiary(), percentage: 100, _id: 0 }])
   const [agree, setAgree] = useState(false)
+
+  // Pulls the contractual email from the B2Core portal session (SSO), so it always
+  // matches the email the client logs in with. Falls back to manual entry if B2Core
+  // doesn't respond (e.g. previewing outside the portal).
+  const [ssoEmail, setSsoEmail] = useState(null)
+
+  useEffect(() => {
+    if (!framed) return
+    function handleMessage(event) {
+      const data = event.data
+      if (!data || typeof data !== 'object') return
+      if (data.type !== 'embed-jwt-token') return
+      const token = data.token || data.jwt || data.access_token
+      if (!token) return
+      const payload = decodeJwtPayload(token)
+      const email =
+        payload?.email ||
+        payload?.user_email ||
+        (typeof payload?.sub === 'string' && payload.sub.includes('@') ? payload.sub : null)
+      if (email) {
+        setSsoEmail(email)
+        setForm((f) => ({ ...f, email }))
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    window.parent.postMessage({ type: 'embed-iframe-ready' }, '*')
+    window.parent.postMessage({ type: 'embed-request-jwt-token' }, '*')
+    return () => window.removeEventListener('message', handleMessage)
+  }, [framed])
 
   // Approximate same-day USD/MXN exchange rate, fetched once when MXN is selected
   const [mxnRate, setMxnRate] = useState(null)
@@ -276,6 +324,7 @@ export default function ContractIntake() {
       for (const b of beneficiaries) {
         if (!b.fullName.trim() || !b.relationship.trim() || !b.percentage || !b.phone.trim() || !b.email.trim())
           return 'Completa nombre, parentesco, porcentaje, teléfono y correo de cada beneficiario.'
+        if (b.relationship === 'Otro' && !b.relationshipOther.trim()) return 'Especifica el parentesco del beneficiario.'
         if (!emailRe.test(b.email)) return 'Hay un correo de beneficiario inválido.'
       }
       if (totalPercentage !== 100) return `El porcentaje total debe sumar 100% (actualmente ${totalPercentage}%).`
@@ -313,7 +362,10 @@ export default function ContractIntake() {
             planPayout: selectedPlan?.payout || '',
             planPenalty: selectedPlan?.penalty || '',
           },
-          beneficiaries: beneficiaries.map(({ _id, ...rest }) => rest),
+          beneficiaries: beneficiaries.map(({ _id, relationship, relationshipOther, ...rest }) => ({
+            ...rest,
+            relationship: relationship === 'Otro' ? relationshipOther : relationship,
+          })),
         }),
       })
       if (!res.ok) throw new Error('Send failed')
@@ -396,8 +448,10 @@ export default function ContractIntake() {
                 <Field label="Teléfono con lada internacional" required>
                   <TextInput value={form.phone} onChange={update('phone')} placeholder="+52 55 0000 0000" />
                 </Field>
-                <Field label="Correo electrónico contractual" required hint="Autorizado para notificaciones del contrato">
-                  <TextInput type="email" value={form.email} onChange={update('email')} placeholder="correo@ejemplo.com" />
+                <Field label="Correo con el que te registraste" required
+                  hint="Correo con el que te registraste en el portal ARKA">
+                  <TextInput type="email" value={form.email} onChange={update('email')} placeholder="correo@ejemplo.com"
+                    disabled={!!ssoEmail} />
                 </Field>
               </div>
 
@@ -535,6 +589,10 @@ export default function ContractIntake() {
                 </Field>
               </div>
 
+              <p className="text-white/40 text-xs">
+                * El monto en USD es aproximado y puede variar según el tipo de cambio vigente el día de la transferencia.
+              </p>
+
               {form.currency === 'MXN' && (
                 <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 text-sm space-y-1">
                   {rateStatus === 'loading' && <p className="text-white/55">Obteniendo el tipo de cambio del día…</p>}
@@ -553,9 +611,6 @@ export default function ContractIntake() {
                         Equivalente aproximado: <span className="font-semibold text-white">${formatMoney(usdEquivalent)} USD</span>*
                       </p>
                       <p className="text-white/50 text-xs">Tipo de cambio del día: {exchangeRateLabel}</p>
-                      <p className="text-white/40 text-xs">
-                        * El monto final depende del día de la transferencia y puede variar según el tipo de cambio vigente ese día.
-                      </p>
                     </>
                   )}
                 </div>
@@ -597,13 +652,22 @@ export default function ContractIntake() {
                   </Field>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <Field label="Parentesco" required>
-                      <TextInput value={b.relationship} onChange={(e) => updateBeneficiary(b._id, 'relationship', e.target.value)} />
+                      <select value={b.relationship} onChange={(e) => updateBeneficiary(b._id, 'relationship', e.target.value)}
+                        className={inputClass}>
+                        <option value="">Selecciona…</option>
+                        {RELATIONSHIPS.map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
                     </Field>
                     <Field label="Porcentaje asignado (%)" required>
                       <TextInput type="number" min="0" max="100" value={b.percentage}
                         onChange={(e) => updateBeneficiary(b._id, 'percentage', e.target.value)} />
                     </Field>
                   </div>
+                  {b.relationship === 'Otro' && (
+                    <Field label="Especifica el parentesco" required>
+                      <TextInput value={b.relationshipOther} onChange={(e) => updateBeneficiary(b._id, 'relationshipOther', e.target.value)} />
+                    </Field>
+                  )}
                   <div className="grid sm:grid-cols-2 gap-4">
                     <Field label="Teléfono" required>
                       <TextInput value={b.phone} onChange={(e) => updateBeneficiary(b._id, 'phone', e.target.value)} />
@@ -671,7 +735,7 @@ export default function ContractIntake() {
                   <div key={b._id} className={i > 0 ? 'pt-3 mt-3 border-t border-white/10' : ''}>
                     <p className="text-white/70 text-xs font-medium mb-1">Beneficiario {i + 1}</p>
                     <SummaryRow label="Nombre" value={b.fullName} />
-                    <SummaryRow label="Parentesco" value={b.relationship} />
+                    <SummaryRow label="Parentesco" value={b.relationship === 'Otro' ? b.relationshipOther : b.relationship} />
                     <SummaryRow label="Porcentaje" value={b.percentage ? `${b.percentage}%` : ''} />
                     <SummaryRow label="Teléfono" value={b.phone} />
                     <SummaryRow label="Correo" value={b.email} />
