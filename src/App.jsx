@@ -15,7 +15,11 @@ import LegalCenter from '@/pages/LegalCenter'
 import Contact from '@/pages/Contact'
 import Simulator from '@/pages/Simulator'
 import Profiler from '@/pages/Profiler'
+import ContractIntake from '@/pages/ContractIntake'
 import ChatWidget from '@/components/shared/ChatWidget'
+
+// Routes rendered without Header/Footer/ChatWidget — meant for iframe embedding, not public navigation
+const STANDALONE_ROUTES = ['/contract-intake']
 
 const SEO_MAP = {
   '/': {
@@ -73,6 +77,11 @@ const SEO_MAP = {
     description:
       'Discover which ARKA investment strategy matches your risk profile. Complete the 10-question investor assessment.',
   },
+  '/contract-intake': {
+    title: 'ARKA Global Liquidity',
+    description: 'Mandate contract questionnaire.',
+    noindex: true,
+  },
 }
 
 function SEOUpdater() {
@@ -89,6 +98,18 @@ function SEOUpdater() {
       document.head.appendChild(descEl)
     }
     descEl.content = meta.description
+
+    let robotsEl = document.querySelector('meta[name="robots"]')
+    if (meta.noindex) {
+      if (!robotsEl) {
+        robotsEl = document.createElement('meta')
+        robotsEl.name = 'robots'
+        document.head.appendChild(robotsEl)
+      }
+      robotsEl.content = 'noindex, nofollow'
+    } else if (robotsEl) {
+      robotsEl.remove()
+    }
 
     // OpenGraph
     const ogMeta = {
@@ -115,7 +136,11 @@ function SEOUpdater() {
   return null
 }
 
-function Layout({ children, isHome }) {
+function Layout({ children }) {
+  const location = useLocation()
+  if (STANDALONE_ROUTES.includes(location.pathname)) {
+    return <div className="min-h-screen bg-[#050505]">{children}</div>
+  }
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col">
       <Header />
@@ -155,6 +180,8 @@ export default function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/simulator" element={<Simulator />} />
           <Route path="/profiler" element={<Profiler />} />
+          {/* Hidden — not in public nav, noindex. Used as iframe embed inside B2Core. */}
+          <Route path="/contract-intake" element={<ContractIntake />} />
           {/* Catch-all */}
           <Route path="*" element={<Home />} />
         </Routes>
