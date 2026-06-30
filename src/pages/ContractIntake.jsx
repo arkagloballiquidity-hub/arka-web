@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { montoEnLetras } from '@/utils/numberToWordsEs'
 
@@ -18,24 +18,27 @@ const FUNDS_ORIGINS = [
 
 const PLAN_TYPES = ['Flexible', 'Fijo / Fixed']
 
-const CURRENCIES = ['USD', 'MXN', 'USDT', 'USDC', 'BTC', 'ETH', 'Otro']
+const CURRENCIES = ['USD', 'MXN']
 
 const STEP_LABELS = ['Mandante', 'Identificación', 'Actividad', 'Plan de Ahorro', 'Beneficiarios', 'Revisión']
+
+const ACCENT = '#004C45'
+const ACCENT_HOVER = '#005c54'
 
 function Field({ label, required, hint, children }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[11px] tracking-[0.12em] uppercase text-white/55">
-        {label} {required && <span className="text-[#C9A352]">*</span>}
+      <label className="block text-xs tracking-[0.06em] uppercase text-white/70 font-medium">
+        {label} {required && <span style={{ color: ACCENT_HOVER }}>*</span>}
       </label>
       {children}
-      {hint && <p className="text-[11px] text-white/30">{hint}</p>}
+      {hint && <p className="text-xs text-white/45">{hint}</p>}
     </div>
   )
 }
 
 const inputClass =
-  'w-full bg-white/[0.04] border border-white/10 rounded px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#C9A352]/50 transition-colors'
+  'w-full bg-white/[0.05] border border-white/10 rounded px-4 py-3 text-sm text-white placeholder-white/35 focus:outline-none focus:border-[#005c54] transition-colors'
 
 function TextInput(props) {
   return <input {...props} className={inputClass} />
@@ -55,8 +58,8 @@ function PillGroup({ options, value, onChange, columns = 2 }) {
           onClick={() => onChange(opt)}
           className={`text-left px-4 py-3 rounded-lg border text-sm transition-all duration-150 ${
             value === opt
-              ? 'border-[#C9A352]/60 bg-[#C9A352]/10 text-white'
-              : 'border-white/8 bg-white/[0.02] text-white/65 hover:border-white/20 hover:text-white'
+              ? 'border-[#005c54] bg-[#004C45]/25 text-white'
+              : 'border-white/10 bg-white/[0.03] text-white/75 hover:border-white/25 hover:text-white'
           }`}
         >
           {opt}
@@ -66,8 +69,33 @@ function PillGroup({ options, value, onChange, columns = 2 }) {
   )
 }
 
+function SummaryRow({ label, value }) {
+  if (value === undefined || value === null || value === '') return null
+  return (
+    <div className="flex justify-between gap-4 py-1">
+      <span className="text-white/50 text-xs shrink-0">{label}</span>
+      <span className="text-white/95 text-sm text-right">{value}</span>
+    </div>
+  )
+}
+
+function SummarySection({ title, children }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-0.5">
+      <p className="text-xs tracking-[0.12em] uppercase text-white/55 font-medium mb-2">{title}</p>
+      {children}
+    </div>
+  )
+}
+
 function emptyBeneficiary() {
   return { fullName: '', relationship: '', percentage: '', idType: '', idNumber: '', idExpiry: '', contact: '' }
+}
+
+function formatMoney(n) {
+  const num = Number(n)
+  if (!Number.isFinite(num)) return ''
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 // True only when the page is rendered inside an iframe (e.g. embedded in B2Core).
@@ -92,13 +120,37 @@ export default function ContractIntake() {
     fullName: '', nationality: '', phone: '', email: '', address: '',
     idType: '', idTypeOther: '', idNumber: '', idIssuingAuthority: '', idIssueDate: '', idExpiryDate: '',
     economicActivity: '', economicActivityOther: '', fundsOrigin: '', fundsOriginOther: '', activityDescription: '',
-    planType: '', initialAmountNumber: '', initialAmountWords: '', currency: '', currencyOther: '',
-    usdEquivalent: '', exchangeRate: '',
+    planType: '', initialAmountNumber: '', initialAmountWords: '', currency: '',
   })
   const [amountWordsTouched, setAmountWordsTouched] = useState(false)
 
   const [beneficiaries, setBeneficiaries] = useState([{ ...emptyBeneficiary(), percentage: 100, _id: 0 }])
   const [agree, setAgree] = useState(false)
+
+  // Approximate same-day USD/MXN exchange rate, fetched once when MXN is selected
+  const [mxnRate, setMxnRate] = useState(null)
+  const [rateStatus, setRateStatus] = useState('idle') // idle | loading | loaded | error
+
+  useEffect(() => {
+    if (form.currency !== 'MXN' || mxnRate !== null || rateStatus === 'loading') return
+    setRateStatus('loading')
+    fetch('https://api.frankfurter.dev/v1/latest?from=USD&to=MXN')
+      .then((r) => r.json())
+      .then((data) => {
+        const rate = data?.rates?.MXN
+        if (!rate) throw new Error('no rate')
+        setMxnRate(rate)
+        setRateStatus('loaded')
+      })
+      .catch(() => setRateStatus('error'))
+  }, [form.currency, mxnRate, rateStatus])
+
+  const usdEquivalent =
+    form.currency === 'USD'
+      ? (form.initialAmountNumber ? Number(form.initialAmountNumber) : null)
+      : (mxnRate && form.initialAmountNumber ? Number(form.initialAmountNumber) / mxnRate : null)
+
+  const exchangeRateLabel = form.currency === 'MXN' && mxnRate ? `1 USD ≈ ${mxnRate.toFixed(2)} MXN` : ''
 
   const update = (field) => (e) => {
     const value = e?.target ? (e.target.type === 'checkbox' ? e.target.checked : e.target.value) : e
@@ -174,8 +226,8 @@ export default function ContractIntake() {
     if (step === 4) {
       if (!form.planType) return 'Selecciona el tipo de Plan de Ahorro.'
       if (!form.initialAmountNumber || Number(form.initialAmountNumber) <= 0) return 'Indica el monto de aportación inicial.'
-      if (!form.currency) return 'Selecciona la divisa o activo de aportación.'
-      if (form.currency === 'Otro' && !form.currencyOther.trim()) return 'Especifica la divisa o activo.'
+      if (!form.currency) return 'Selecciona la divisa de aportación.'
+      if (form.currency === 'MXN' && !mxnRate) return 'Esperando el tipo de cambio del día — intenta de nuevo en un momento.'
     }
     if (step === 5) {
       for (const b of beneficiaries) {
@@ -206,7 +258,11 @@ export default function ContractIntake() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mandante: form,
+          mandante: {
+            ...form,
+            usdEquivalent: usdEquivalent !== null ? formatMoney(usdEquivalent) : '',
+            exchangeRate: exchangeRateLabel,
+          },
           beneficiaries: beneficiaries.map(({ _id, ...rest }) => rest),
         }),
       })
@@ -223,8 +279,8 @@ export default function ContractIntake() {
 
   if (!framed) {
     return (
-      <main className="min-h-screen bg-[#050505] flex items-center justify-center px-6 text-center">
-        <p className="text-white/40 text-sm max-w-sm">
+      <main className="min-h-screen bg-[rgb(25,25,25)] flex items-center justify-center px-6 text-center">
+        <p className="text-white/50 text-sm max-w-sm">
           Esta página solo está disponible dentro del portal ARKA.
         </p>
       </main>
@@ -232,24 +288,24 @@ export default function ContractIntake() {
   }
 
   return (
-    <main className="min-h-screen bg-[#050505] px-5 sm:px-10 md:px-16 py-12 md:py-16">
+    <main className="min-h-screen bg-[rgb(25,25,25)] px-5 sm:px-10 md:px-16 py-12 md:py-16">
       <div className="max-w-2xl mx-auto">
 
         <div className="text-center mb-10">
-          <p className="text-[10px] tracking-[0.5em] uppercase text-white/50 mb-3">ARKA Global Liquidity</p>
-          <h1 className="text-[clamp(1.6rem,4vw,2.4rem)] font-light text-white">
+          <p className="text-xs tracking-[0.35em] uppercase text-white/60 mb-3">ARKA Global Liquidity</p>
+          <h1 className="text-[clamp(1.6rem,4vw,2.4rem)] font-medium text-white">
             Cuestionario para Contrato de Mandato
           </h1>
         </div>
 
         {step >= 1 && step <= 6 && (
           <div className="space-y-2 mb-8">
-            <div className="flex justify-between text-[10px] tracking-[0.25em] uppercase text-white/40">
+            <div className="flex justify-between text-xs tracking-[0.15em] uppercase text-white/55">
               <span>{STEP_LABELS[step - 1]}</span>
               <span>{step} / 6</span>
             </div>
-            <div className="h-px bg-white/8 rounded-full overflow-hidden">
-              <motion.div className="h-full bg-gradient-to-r from-[#C9A352] to-[#E8C87A]"
+            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+              <motion.div className="h-full" style={{ backgroundColor: ACCENT_HOVER }}
                 initial={false} animate={{ width: `${progressPct}%` }} transition={{ duration: 0.35 }} />
             </div>
           </div>
@@ -260,12 +316,12 @@ export default function ContractIntake() {
           {step === 0 && (
             <motion.div key="intro" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}
               className="text-center space-y-8 py-8">
-              <p className="text-white/70 text-base leading-relaxed max-w-lg mx-auto">
+              <p className="text-white/80 text-base leading-relaxed max-w-lg mx-auto">
                 Completa la siguiente información para preparar tu Contrato de Mandato. Los datos deben coincidir
                 con tu identificación oficial y documentación KYC. Toma aproximadamente 5 minutos.
               </p>
               <button onClick={() => go(1, 1)}
-                className="inline-flex items-center gap-2 text-[11px] tracking-[0.22em] uppercase font-medium bg-[#004C45] text-white hover:bg-[#005c54] px-12 py-4 rounded-sm transition-all duration-300">
+                className="inline-flex items-center gap-2 text-xs tracking-[0.15em] uppercase font-semibold bg-[#004C45] text-white hover:bg-[#005c54] px-12 py-4 rounded-sm transition-all duration-300">
                 Comenzar
               </button>
             </motion.div>
@@ -274,7 +330,7 @@ export default function ContractIntake() {
           {step === 1 && (
             <motion.div key="s1" custom={dir} initial={{ opacity: 0, x: dir * 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -20 }}
               className="space-y-5">
-              <h2 className="text-lg font-light text-white mb-1">1. Datos generales del Mandante</h2>
+              <h2 className="text-lg font-semibold text-white mb-1">1. Datos generales del Mandante</h2>
               <Field label="Nombre completo del Mandante" required hint="Exactamente como aparece en tu identificación oficial">
                 <TextInput value={form.fullName} onChange={update('fullName')} placeholder="Nombre completo" />
               </Field>
@@ -298,7 +354,7 @@ export default function ContractIntake() {
           {step === 2 && (
             <motion.div key="s2" custom={dir} initial={{ opacity: 0, x: dir * 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -20 }}
               className="space-y-5">
-              <h2 className="text-lg font-light text-white mb-1">2. Identificación oficial</h2>
+              <h2 className="text-lg font-semibold text-white mb-1">2. Identificación oficial</h2>
               <Field label="Tipo de identificación oficial" required>
                 <PillGroup options={ID_TYPES} value={form.idType} onChange={(v) => setForm((f) => ({ ...f, idType: v }))} />
               </Field>
@@ -329,7 +385,7 @@ export default function ContractIntake() {
           {step === 3 && (
             <motion.div key="s3" custom={dir} initial={{ opacity: 0, x: dir * 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -20 }}
               className="space-y-5">
-              <h2 className="text-lg font-light text-white mb-1">3. Actividad económica y origen de fondos</h2>
+              <h2 className="text-lg font-semibold text-white mb-1">3. Actividad económica y origen de fondos</h2>
               <Field label="Actividad económica principal" required>
                 <PillGroup options={ECONOMIC_ACTIVITIES} value={form.economicActivity} onChange={(v) => setForm((f) => ({ ...f, economicActivity: v }))} />
               </Field>
@@ -355,7 +411,7 @@ export default function ContractIntake() {
           {step === 4 && (
             <motion.div key="s4" custom={dir} initial={{ opacity: 0, x: dir * 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -20 }}
               className="space-y-5">
-              <h2 className="text-lg font-light text-white mb-1">4. Plan de Ahorro seleccionado</h2>
+              <h2 className="text-lg font-semibold text-white mb-1">4. Plan de Ahorro seleccionado</h2>
               <Field label="Tipo de Plan de Ahorro / Savings" required>
                 <PillGroup options={PLAN_TYPES} value={form.planType} onChange={(v) => setForm((f) => ({ ...f, planType: v }))} />
               </Field>
@@ -368,22 +424,30 @@ export default function ContractIntake() {
                     onChange={(e) => { setAmountWordsTouched(true); update('initialAmountWords')(e) }} />
                 </Field>
               </div>
-              <Field label="Divisa o activo de aportación" required>
-                <PillGroup columns={3} options={CURRENCIES} value={form.currency} onChange={handleCurrencyChange} />
+              <Field label="Divisa de aportación" required>
+                <PillGroup options={CURRENCIES} value={form.currency} onChange={handleCurrencyChange} />
               </Field>
-              {form.currency === 'Otro' && (
-                <Field label="Especifica la divisa o activo" required>
-                  <TextInput value={form.currencyOther} onChange={update('currencyOther')} />
-                </Field>
-              )}
-              {form.currency && form.currency !== 'USD' && (
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <Field label="Equivalente en USD" hint="Si aplica">
-                    <TextInput type="number" min="0" step="0.01" value={form.usdEquivalent} onChange={update('usdEquivalent')} />
-                  </Field>
-                  <Field label="Tipo de cambio" hint="Si aplica">
-                    <TextInput value={form.exchangeRate} onChange={update('exchangeRate')} />
-                  </Field>
+
+              {form.currency === 'MXN' && (
+                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 text-sm space-y-1">
+                  {rateStatus === 'loading' && <p className="text-white/55">Obteniendo el tipo de cambio del día…</p>}
+                  {rateStatus === 'error' && (
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-red-400 text-xs">No se pudo obtener el tipo de cambio.</p>
+                      <button type="button" onClick={() => setRateStatus('idle')}
+                        className="text-xs text-white/70 hover:text-white underline shrink-0">
+                        Reintentar
+                      </button>
+                    </div>
+                  )}
+                  {rateStatus === 'loaded' && mxnRate && (
+                    <>
+                      <p className="text-white/85">
+                        Equivalente aproximado: <span className="font-semibold text-white">${formatMoney(usdEquivalent)} USD</span>
+                      </p>
+                      <p className="text-white/50 text-xs">Tipo de cambio del día: {exchangeRateLabel}</p>
+                    </>
+                  )}
                 </div>
               )}
             </motion.div>
@@ -393,24 +457,24 @@ export default function ContractIntake() {
             <motion.div key="s5" custom={dir} initial={{ opacity: 0, x: dir * 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -20 }}
               className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-light text-white">5. Beneficiarios</h2>
-                <span className={`text-xs tabular-nums font-medium ${totalPercentage === 100 ? 'text-[#46B58F]' : 'text-[#E0705A]'}`}>
+                <h2 className="text-lg font-semibold text-white">5. Beneficiarios</h2>
+                <span className={`text-sm tabular-nums font-semibold ${totalPercentage === 100 ? 'text-[#46B58F]' : 'text-[#E0705A]'}`}>
                   Total asignado: {totalPercentage}%
                 </span>
               </div>
-              <p className="text-white/40 text-xs">
+              <p className="text-white/55 text-xs">
                 Agrega los beneficiarios que necesites. Los porcentajes deben sumar 100%.
               </p>
 
               {beneficiaries.map((b, i) => (
-                <div key={b._id} className="rounded-xl border border-white/8 bg-white/[0.02] p-5 space-y-4">
+                <div key={b._id} className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] tracking-[0.2em] uppercase text-white/50">
+                    <p className="text-xs tracking-[0.1em] uppercase text-white/60 font-medium">
                       Beneficiario {i + 1}
                     </p>
                     {beneficiaries.length > 1 && (
                       <button type="button" onClick={() => removeBeneficiary(b._id)}
-                        className="text-[10px] tracking-[0.15em] uppercase text-white/35 hover:text-red-400 transition-colors">
+                        className="text-xs tracking-[0.06em] uppercase text-white/50 hover:text-red-400 transition-colors">
                         Eliminar
                       </button>
                     )}
@@ -452,11 +516,11 @@ export default function ContractIntake() {
 
               <div className="flex gap-3">
                 <button type="button" onClick={addBeneficiary}
-                  className="flex-1 text-[11px] tracking-[0.18em] uppercase border border-white/15 text-white/65 hover:border-white/35 hover:text-white px-4 py-3 rounded-sm transition-all duration-300">
+                  className="flex-1 text-xs tracking-[0.1em] uppercase font-medium border border-white/15 text-white/75 hover:border-white/35 hover:text-white px-4 py-3 rounded-sm transition-all duration-300">
                   + Agregar beneficiario
                 </button>
                 <button type="button" onClick={distributeEvenly}
-                  className="flex-1 text-[11px] tracking-[0.18em] uppercase border border-white/15 text-white/65 hover:border-white/35 hover:text-white px-4 py-3 rounded-sm transition-all duration-300">
+                  className="flex-1 text-xs tracking-[0.1em] uppercase font-medium border border-white/15 text-white/75 hover:border-white/35 hover:text-white px-4 py-3 rounded-sm transition-all duration-300">
                   Distribuir % equitativamente
                 </button>
               </div>
@@ -465,21 +529,61 @@ export default function ContractIntake() {
 
           {step === 6 && (
             <motion.div key="s6" custom={dir} initial={{ opacity: 0, x: dir * 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -20 }}
-              className="space-y-6">
-              <h2 className="text-lg font-light text-white mb-1">6. Revisión</h2>
+              className="space-y-4">
+              <h2 className="text-lg font-semibold text-white mb-1">6. Revisión</h2>
+              <p className="text-white/55 text-sm mb-2">Revisa que toda tu información sea correcta antes de enviar.</p>
 
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-5 space-y-3 text-sm">
-                <p className="text-white/85"><span className="text-white/40">Mandante:</span> {form.fullName}</p>
-                <p className="text-white/85"><span className="text-white/40">Correo:</span> {form.email}</p>
-                <p className="text-white/85"><span className="text-white/40">Teléfono:</span> {form.phone}</p>
-                <p className="text-white/85"><span className="text-white/40">Identificación:</span> {form.idType === 'Otro' ? form.idTypeOther : form.idType} — {form.idNumber}</p>
-                <p className="text-white/85"><span className="text-white/40">Plan:</span> {form.planType} — {form.initialAmountNumber} {form.currency === 'Otro' ? form.currencyOther : form.currency}</p>
-                <p className="text-white/85"><span className="text-white/40">Beneficiarios:</span> {beneficiaries.map((b) => `${b.fullName} (${b.percentage}%)`).join(', ')}</p>
-              </div>
+              <SummarySection title="1. Datos generales del Mandante">
+                <SummaryRow label="Nombre completo" value={form.fullName} />
+                <SummaryRow label="Nacionalidad" value={form.nationality} />
+                <SummaryRow label="Teléfono" value={form.phone} />
+                <SummaryRow label="Correo" value={form.email} />
+                <SummaryRow label="Domicilio" value={form.address} />
+              </SummarySection>
 
-              <label className="flex items-start gap-3 text-sm text-white/70 cursor-pointer">
+              <SummarySection title="2. Identificación oficial">
+                <SummaryRow label="Tipo" value={form.idType === 'Otro' ? form.idTypeOther : form.idType} />
+                <SummaryRow label="Número" value={form.idNumber} />
+                <SummaryRow label="Autoridad emisora" value={form.idIssuingAuthority} />
+                <SummaryRow label="Fecha de expedición" value={form.idIssueDate} />
+                <SummaryRow label="Fecha de vencimiento" value={form.idExpiryDate} />
+              </SummarySection>
+
+              <SummarySection title="3. Actividad económica y origen de fondos">
+                <SummaryRow label="Actividad económica" value={form.economicActivity === 'Otro' ? form.economicActivityOther : form.economicActivity} />
+                <SummaryRow label="Origen de los recursos" value={form.fundsOrigin === 'Otro' ? form.fundsOriginOther : form.fundsOrigin} />
+                <SummaryRow label="Descripción" value={form.activityDescription} />
+              </SummarySection>
+
+              <SummarySection title="4. Plan de Ahorro">
+                <SummaryRow label="Tipo de plan" value={form.planType} />
+                <SummaryRow label="Aportación inicial" value={form.initialAmountNumber ? `${formatMoney(form.initialAmountNumber)} ${form.currency}` : ''} />
+                <SummaryRow label="Monto en letra" value={form.initialAmountWords} />
+                {form.currency === 'MXN' && (
+                  <>
+                    <SummaryRow label="Equivalente en USD" value={usdEquivalent !== null ? `$${formatMoney(usdEquivalent)} USD` : 'Calculando…'} />
+                    <SummaryRow label="Tipo de cambio" value={exchangeRateLabel} />
+                  </>
+                )}
+              </SummarySection>
+
+              <SummarySection title="5. Beneficiarios">
+                {beneficiaries.map((b, i) => (
+                  <div key={b._id} className={i > 0 ? 'pt-3 mt-3 border-t border-white/10' : ''}>
+                    <p className="text-white/70 text-xs font-medium mb-1">Beneficiario {i + 1}</p>
+                    <SummaryRow label="Nombre" value={b.fullName} />
+                    <SummaryRow label="Parentesco" value={b.relationship} />
+                    <SummaryRow label="Porcentaje" value={b.percentage ? `${b.percentage}%` : ''} />
+                    <SummaryRow label="Identificación" value={b.idType ? `${b.idType}${b.idNumber ? ' — ' + b.idNumber : ''}` : b.idNumber} />
+                    <SummaryRow label="Vencimiento ID" value={b.idExpiry} />
+                    <SummaryRow label="Contacto" value={b.contact} />
+                  </div>
+                ))}
+              </SummarySection>
+
+              <label className="flex items-start gap-3 text-sm text-white/80 cursor-pointer pt-2">
                 <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5" />
+                  className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 accent-[#004C45]" />
                 <span>Confirmo que la información proporcionada es verídica y corresponde a mi documentación oficial vigente.</span>
               </label>
             </motion.div>
@@ -489,8 +593,8 @@ export default function ContractIntake() {
             <motion.div key="s7" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               className="text-center space-y-6 py-12">
               <p className="text-4xl">✓</p>
-              <h2 className="text-xl font-light text-white">Cuestionario enviado</h2>
-              <p className="text-white/60 text-sm max-w-md mx-auto">
+              <h2 className="text-xl font-semibold text-white">Cuestionario enviado</h2>
+              <p className="text-white/70 text-sm max-w-md mx-auto">
                 Hemos recibido tu información. Nuestro equipo preparará tu Contrato de Mandato y se pondrá en
                 contacto contigo a través del correo proporcionado.
               </p>
@@ -504,20 +608,20 @@ export default function ContractIntake() {
         )}
 
         {step >= 1 && step <= 6 && (
-          <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/[0.07]">
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/10">
             <button onClick={back}
-              className="text-[10px] tracking-[0.2em] uppercase text-white/35 hover:text-white/65 transition-colors disabled:opacity-0"
+              className="text-xs tracking-[0.1em] uppercase font-medium text-white/55 hover:text-white/85 transition-colors disabled:opacity-0"
               disabled={step === 1}>
               ← Atrás
             </button>
             {step < 6 ? (
               <button onClick={next}
-                className="inline-flex items-center gap-2 text-[11px] tracking-[0.22em] uppercase font-medium bg-[#004C45] text-white hover:bg-[#005c54] px-10 py-3.5 rounded-sm transition-all duration-300">
+                className="inline-flex items-center gap-2 text-xs tracking-[0.12em] uppercase font-semibold bg-[#004C45] text-white hover:bg-[#005c54] px-10 py-3.5 rounded-sm transition-all duration-300">
                 Siguiente →
               </button>
             ) : (
               <button onClick={submit} disabled={sendStatus === 'sending'}
-                className="inline-flex items-center gap-2 text-[11px] tracking-[0.22em] uppercase font-medium bg-[#004C45] text-white hover:bg-[#005c54] px-10 py-3.5 rounded-sm transition-all duration-300 disabled:opacity-50">
+                className="inline-flex items-center gap-2 text-xs tracking-[0.12em] uppercase font-semibold bg-[#004C45] text-white hover:bg-[#005c54] px-10 py-3.5 rounded-sm transition-all duration-300 disabled:opacity-50">
                 {sendStatus === 'sending' ? 'Enviando…' : 'Enviar cuestionario'}
               </button>
             )}
