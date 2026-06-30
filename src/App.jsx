@@ -154,7 +154,8 @@ function Layout({ children }) {
 }
 
 export default function App() {
-  const [loading, setLoading] = useState(true)
+  const skipLoadingScreen = STANDALONE_ROUTES.includes(window.location.pathname)
+  const [loading, setLoading] = useState(!skipLoadingScreen)
   const handleDone = useCallback(() => setLoading(false), [])
 
   return (
