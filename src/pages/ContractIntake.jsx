@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { montoEnLetras } from '@/utils/numberToWordsEs'
 
 const ID_TYPES = ['INE / Identificación nacional', 'Pasaporte', 'Licencia de conducir', 'Documento migratorio', 'Otro']
 
@@ -16,9 +15,46 @@ const FUNDS_ORIGINS = [
   'Criptoactivos', 'Herencia', 'Otro',
 ]
 
-const PLAN_TYPES = ['Flexible', 'Fijo / Fixed']
+const SAVINGS_PLANS = [
+  {
+    name: 'Flex 20',
+    description: 'Plan diseñado para personas que quieran tener su dinero fijo por periodos de 6 meses.',
+    maxLoss: '5%',
+    term: '6 meses',
+    minInvestment: '$500,000.00 MXN',
+    returnRate: '20% anual',
+    payout: 'Al día 183, tomando como inicio la fecha en que se realizó el lote de inversión.',
+    penalty: '25% sobre los rendimientos obtenidos al momento de la solicitud de retiro.',
+  },
+  {
+    name: 'Fijo 22/1',
+    description: 'Plan diseñado para personas que quieran tener su dinero fijo durante 1 año.',
+    maxLoss: '7.5%',
+    term: '1 año',
+    minInvestment: '$500,000.00 MXN',
+    returnRate: '22% anual',
+    payout: 'Al día 366, tomando como inicio la fecha en que se realizó el lote de inversión.',
+    penalty: '25% sobre los rendimientos obtenidos al momento de la solicitud de retiro.',
+  },
+  {
+    name: 'Fijo 25/2',
+    description: 'Plan diseñado para personas que quieran tener su dinero fijo durante 2 años.',
+    maxLoss: '10%',
+    term: '2 años',
+    minInvestment: '$500,000.00 MXN',
+    returnRate: '25% anual',
+    payout: 'Al día 731, tomando como inicio la fecha en que se realizó el lote de inversión.',
+    penalty: '25% sobre los rendimientos obtenidos al momento de la solicitud de retiro.',
+  },
+]
 
 const CURRENCIES = ['USD', 'MXN']
+
+// Segmento B2B — aportación mínima $500,000 MXN o el equivalente en USD
+const MXN_MINIMUM = 500000
+const USD_MINIMUM = 28571.42
+
+const MAX_BENEFICIARIES = 4
 
 const STEP_LABELS = ['Mandante', 'Identificación', 'Actividad', 'Plan de Ahorro', 'Beneficiarios', 'Revisión']
 
@@ -40,12 +76,8 @@ function Field({ label, required, hint, children }) {
 const inputClass =
   'w-full bg-white/[0.05] border border-white/10 rounded px-4 py-3 text-sm text-white placeholder-white/35 focus:outline-none focus:border-[#005c54] transition-colors'
 
-function TextInput(props) {
-  return <input {...props} className={inputClass} />
-}
-
-function TextArea(props) {
-  return <textarea {...props} className={inputClass} />
+function TextInput({ className = '', ...props }) {
+  return <input {...props} className={`${inputClass} ${className}`} />
 }
 
 function PillGroup({ options, value, onChange, columns = 2 }) {
@@ -89,7 +121,7 @@ function SummarySection({ title, children }) {
 }
 
 function emptyBeneficiary() {
-  return { fullName: '', relationship: '', percentage: '', idType: '', idNumber: '', idExpiry: '', contact: '' }
+  return { fullName: '', relationship: '', percentage: '', phone: '', email: '' }
 }
 
 function formatMoney(n) {
@@ -117,12 +149,12 @@ export default function ContractIntake() {
   const idCounter = useRef(1)
 
   const [form, setForm] = useState({
-    fullName: '', nationality: '', phone: '', email: '', address: '',
-    idType: '', idTypeOther: '', idNumber: '', idIssuingAuthority: '', idIssueDate: '', idExpiryDate: '',
-    economicActivity: '', economicActivityOther: '', fundsOrigin: '', fundsOriginOther: '', activityDescription: '',
-    planType: '', initialAmountNumber: '', initialAmountWords: '', currency: '',
+    fullName: '', nationality: '', phone: '', email: '', taxId: '',
+    addressStreet: '', addressNumber: '', addressColony: '', addressZip: '', addressCity: '', addressState: '', addressCountry: '',
+    idType: '', idTypeOther: '',
+    economicActivity: '', economicActivityOther: '', fundsOrigin: '', fundsOriginOther: '',
+    planType: '', initialAmountNumber: '', currency: '',
   })
-  const [amountWordsTouched, setAmountWordsTouched] = useState(false)
 
   const [beneficiaries, setBeneficiaries] = useState([{ ...emptyBeneficiary(), percentage: 100, _id: 0 }])
   const [agree, setAgree] = useState(false)
@@ -152,26 +184,32 @@ export default function ContractIntake() {
 
   const exchangeRateLabel = form.currency === 'MXN' && mxnRate ? `1 USD ≈ ${mxnRate.toFixed(2)} MXN` : ''
 
+  const currentMinimum = form.currency === 'MXN' ? MXN_MINIMUM : form.currency === 'USD' ? USD_MINIMUM : null
+  const belowMinimum =
+    currentMinimum !== null && form.initialAmountNumber !== '' && Number(form.initialAmountNumber) < currentMinimum
+
+  const selectedPlan = SAVINGS_PLANS.find((p) => p.name === form.planType)
+
+  const fullAddress = [
+    [form.addressStreet, form.addressNumber].filter(Boolean).join(' '),
+    form.addressColony,
+    form.addressZip ? `CP ${form.addressZip}` : '',
+    form.addressCity,
+    form.addressState,
+    form.addressCountry,
+  ].filter(Boolean).join(', ')
+
   const update = (field) => (e) => {
     const value = e?.target ? (e.target.type === 'checkbox' ? e.target.checked : e.target.value) : e
     setForm((f) => ({ ...f, [field]: value }))
   }
 
-  const recomputeAmountWords = (amount, currency) => {
-    if (amountWordsTouched) return
-    const words = montoEnLetras(amount, currency)
-    setForm((f) => ({ ...f, initialAmountWords: words }))
-  }
-
   const handleAmountChange = (e) => {
-    const value = e.target.value
-    setForm((f) => ({ ...f, initialAmountNumber: value }))
-    recomputeAmountWords(value, form.currency)
+    setForm((f) => ({ ...f, initialAmountNumber: e.target.value }))
   }
 
   const handleCurrencyChange = (val) => {
     setForm((f) => ({ ...f, currency: val }))
-    recomputeAmountWords(form.initialAmountNumber, val)
   }
 
   const updateBeneficiary = (id, field, value) => {
@@ -179,6 +217,7 @@ export default function ContractIntake() {
   }
 
   const addBeneficiary = () => {
+    if (beneficiaries.length >= MAX_BENEFICIARIES) return
     idCounter.current += 1
     setBeneficiaries((list) => [...list, { ...emptyBeneficiary(), _id: idCounter.current }])
   }
@@ -205,17 +244,20 @@ export default function ContractIntake() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
   const validateStep = () => {
     if (step === 1) {
-      if (!form.fullName.trim() || !form.email.trim() || !form.phone.trim() || !form.address.trim())
-        return 'Completa nombre, teléfono, correo y domicilio.'
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return 'Correo electrónico inválido.'
+      if (!form.fullName.trim() || !form.email.trim() || !form.phone.trim() || !form.taxId.trim())
+        return 'Completa nombre, teléfono, correo y RFC / Tax ID.'
+      if (!emailRe.test(form.email)) return 'Correo electrónico inválido.'
+      if (!form.addressStreet.trim() || !form.addressNumber.trim() || !form.addressColony.trim() ||
+          !form.addressZip.trim() || !form.addressCity.trim() || !form.addressState.trim() || !form.addressCountry.trim())
+        return 'Completa todos los campos del domicilio.'
     }
     if (step === 2) {
       if (!form.idType) return 'Selecciona el tipo de identificación oficial.'
       if (form.idType === 'Otro' && !form.idTypeOther.trim()) return 'Especifica el tipo de documento.'
-      if (!form.idNumber.trim() || !form.idIssuingAuthority.trim()) return 'Completa número de identificación y autoridad emisora.'
-      if (!form.idIssueDate || !form.idExpiryDate) return 'Completa las fechas de expedición y vencimiento.'
     }
     if (step === 3) {
       if (!form.economicActivity) return 'Selecciona tu actividad económica principal.'
@@ -228,11 +270,13 @@ export default function ContractIntake() {
       if (!form.initialAmountNumber || Number(form.initialAmountNumber) <= 0) return 'Indica el monto de aportación inicial.'
       if (!form.currency) return 'Selecciona la divisa de aportación.'
       if (form.currency === 'MXN' && !mxnRate) return 'Esperando el tipo de cambio del día — intenta de nuevo en un momento.'
+      if (belowMinimum) return `El monto mínimo es ${formatMoney(currentMinimum)} ${form.currency}.`
     }
     if (step === 5) {
       for (const b of beneficiaries) {
-        if (!b.fullName.trim() || !b.relationship.trim() || !b.percentage)
-          return 'Completa nombre, parentesco y porcentaje de cada beneficiario.'
+        if (!b.fullName.trim() || !b.relationship.trim() || !b.percentage || !b.phone.trim() || !b.email.trim())
+          return 'Completa nombre, parentesco, porcentaje, teléfono y correo de cada beneficiario.'
+        if (!emailRe.test(b.email)) return 'Hay un correo de beneficiario inválido.'
       }
       if (totalPercentage !== 100) return `El porcentaje total debe sumar 100% (actualmente ${totalPercentage}%).`
     }
@@ -260,8 +304,14 @@ export default function ContractIntake() {
         body: JSON.stringify({
           mandante: {
             ...form,
+            address: fullAddress,
             usdEquivalent: usdEquivalent !== null ? formatMoney(usdEquivalent) : '',
             exchangeRate: exchangeRateLabel,
+            planReturnRate: selectedPlan?.returnRate || '',
+            planTerm: selectedPlan?.term || '',
+            planMaxLoss: selectedPlan?.maxLoss || '',
+            planPayout: selectedPlan?.payout || '',
+            planPenalty: selectedPlan?.penalty || '',
           },
           beneficiaries: beneficiaries.map(({ _id, ...rest }) => rest),
         }),
@@ -338,16 +388,51 @@ export default function ContractIntake() {
                 <Field label="Nacionalidad" required>
                   <TextInput value={form.nationality} onChange={update('nationality')} placeholder="Nacionalidad" />
                 </Field>
+                <Field label="RFC / Tax ID" required>
+                  <TextInput value={form.taxId} onChange={update('taxId')} placeholder="RFC / Tax ID" />
+                </Field>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Teléfono con lada internacional" required>
                   <TextInput value={form.phone} onChange={update('phone')} placeholder="+52 55 0000 0000" />
                 </Field>
+                <Field label="Correo electrónico contractual" required hint="Autorizado para notificaciones del contrato">
+                  <TextInput type="email" value={form.email} onChange={update('email')} placeholder="correo@ejemplo.com" />
+                </Field>
               </div>
-              <Field label="Correo electrónico contractual" required hint="Autorizado para notificaciones del contrato">
-                <TextInput type="email" value={form.email} onChange={update('email')} placeholder="correo@ejemplo.com" />
-              </Field>
-              <Field label="Domicilio completo" required hint="Calle, número, colonia, código postal, ciudad/municipio, estado y país">
-                <TextArea rows={3} value={form.address} onChange={update('address')} placeholder="Domicilio completo" />
-              </Field>
+
+              <p className="text-xs tracking-[0.06em] uppercase text-white/70 font-medium pt-2">
+                Domicilio <span style={{ color: ACCENT_HOVER }}>*</span>
+              </p>
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <Field label="Calle" required>
+                    <TextInput value={form.addressStreet} onChange={update('addressStreet')} placeholder="Calle" />
+                  </Field>
+                </div>
+                <Field label="Número" required>
+                  <TextInput value={form.addressNumber} onChange={update('addressNumber')} placeholder="Número" />
+                </Field>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field label="Colonia" required>
+                  <TextInput value={form.addressColony} onChange={update('addressColony')} placeholder="Colonia" />
+                </Field>
+                <Field label="Código postal" required>
+                  <TextInput value={form.addressZip} onChange={update('addressZip')} placeholder="Código postal" />
+                </Field>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-4">
+                <Field label="Ciudad / Municipio" required>
+                  <TextInput value={form.addressCity} onChange={update('addressCity')} placeholder="Ciudad / Municipio" />
+                </Field>
+                <Field label="Estado" required>
+                  <TextInput value={form.addressState} onChange={update('addressState')} placeholder="Estado" />
+                </Field>
+                <Field label="País" required>
+                  <TextInput value={form.addressCountry} onChange={update('addressCountry')} placeholder="País" />
+                </Field>
+              </div>
             </motion.div>
           )}
 
@@ -363,22 +448,6 @@ export default function ContractIntake() {
                   <TextInput value={form.idTypeOther} onChange={update('idTypeOther')} />
                 </Field>
               )}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Número de identificación" required>
-                  <TextInput value={form.idNumber} onChange={update('idNumber')} />
-                </Field>
-                <Field label="Autoridad emisora" required>
-                  <TextInput value={form.idIssuingAuthority} onChange={update('idIssuingAuthority')} />
-                </Field>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Fecha de expedición" required>
-                  <TextInput type="date" value={form.idIssueDate} onChange={update('idIssueDate')} />
-                </Field>
-                <Field label="Fecha de vencimiento" required>
-                  <TextInput type="date" value={form.idExpiryDate} onChange={update('idExpiryDate')} />
-                </Field>
-              </div>
             </motion.div>
           )}
 
@@ -402,9 +471,6 @@ export default function ContractIntake() {
                   <TextInput value={form.fundsOriginOther} onChange={update('fundsOriginOther')} />
                 </Field>
               )}
-              <Field label="Describe brevemente tu actividad económica y el origen de los recursos">
-                <TextArea rows={3} value={form.activityDescription} onChange={update('activityDescription')} />
-              </Field>
             </motion.div>
           )}
 
@@ -412,21 +478,62 @@ export default function ContractIntake() {
             <motion.div key="s4" custom={dir} initial={{ opacity: 0, x: dir * 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -20 }}
               className="space-y-5">
               <h2 className="text-lg font-semibold text-white mb-1">4. Plan de Ahorro seleccionado</h2>
-              <Field label="Tipo de Plan de Ahorro / Savings" required>
-                <PillGroup options={PLAN_TYPES} value={form.planType} onChange={(v) => setForm((f) => ({ ...f, planType: v }))} />
+
+              <Field label="Tipo de Plan de Ahorro / Savings" required
+                hint="Segmento B2B — aportación mínima $500,000.00 MXN o el equivalente a $28,571.42 USD">
+                <div className="space-y-2">
+                  {SAVINGS_PLANS.map((plan) => (
+                    <button key={plan.name} type="button"
+                      onClick={() => setForm((f) => ({ ...f, planType: plan.name }))}
+                      className={`w-full text-left px-4 py-3 rounded-lg border transition-all duration-150 ${
+                        form.planType === plan.name
+                          ? 'border-[#005c54] bg-[#004C45]/25 text-white'
+                          : 'border-white/10 bg-white/[0.03] text-white/75 hover:border-white/25 hover:text-white'
+                      }`}>
+                      <div className="flex justify-between items-center gap-3">
+                        <span className="font-medium text-sm">{plan.name}</span>
+                        <span className="text-xs text-white/50 shrink-0">{plan.returnRate} · {plan.term}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </Field>
+
+              {selectedPlan && (
+                <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 space-y-3 text-sm">
+                  <p className="text-white/75">{selectedPlan.description}</p>
+                  <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-white/10">
+                    {[
+                      ['Riesgo máximo de pérdida', selectedPlan.maxLoss],
+                      ['Plazo fijo', selectedPlan.term],
+                      ['Inversión mínima', selectedPlan.minInvestment],
+                      ['Rendimiento', selectedPlan.returnRate],
+                      ['Entrega de rendimiento', selectedPlan.payout],
+                      ['Penalización por retiro anticipado', selectedPlan.penalty],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <p className="text-white/45 text-[11px] tracking-[0.06em] uppercase">{label}</p>
+                        <p className="text-white/90 text-xs mt-0.5">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Aportación inicial — monto en número" required>
-                  <TextInput type="number" min="0" step="0.01" value={form.initialAmountNumber} onChange={handleAmountChange} placeholder="10000" />
+                  <TextInput type="number" min="0" step="0.01" value={form.initialAmountNumber} onChange={handleAmountChange}
+                    placeholder="10000" className={belowMinimum ? 'border-red-500/70' : ''} />
+                  {belowMinimum && (
+                    <p className="text-xs text-red-400 mt-1">
+                      El monto mínimo es ${formatMoney(currentMinimum)} {form.currency}.
+                    </p>
+                  )}
                 </Field>
-                <Field label="Aportación inicial — monto en letra" hint="Se genera automáticamente; puedes editarlo">
-                  <TextInput value={form.initialAmountWords}
-                    onChange={(e) => { setAmountWordsTouched(true); update('initialAmountWords')(e) }} />
+                <Field label="Divisa de aportación" required>
+                  <PillGroup options={CURRENCIES} value={form.currency} onChange={handleCurrencyChange} />
                 </Field>
               </div>
-              <Field label="Divisa de aportación" required>
-                <PillGroup options={CURRENCIES} value={form.currency} onChange={handleCurrencyChange} />
-              </Field>
 
               {form.currency === 'MXN' && (
                 <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 text-sm space-y-1">
@@ -443,9 +550,12 @@ export default function ContractIntake() {
                   {rateStatus === 'loaded' && mxnRate && (
                     <>
                       <p className="text-white/85">
-                        Equivalente aproximado: <span className="font-semibold text-white">${formatMoney(usdEquivalent)} USD</span>
+                        Equivalente aproximado: <span className="font-semibold text-white">${formatMoney(usdEquivalent)} USD</span>*
                       </p>
                       <p className="text-white/50 text-xs">Tipo de cambio del día: {exchangeRateLabel}</p>
+                      <p className="text-white/40 text-xs">
+                        * El monto final depende del día de la transferencia y puede variar según el tipo de cambio vigente ese día.
+                      </p>
                     </>
                   )}
                 </div>
@@ -463,7 +573,10 @@ export default function ContractIntake() {
                 </span>
               </div>
               <p className="text-white/55 text-xs">
-                Agrega los beneficiarios que necesites. Los porcentajes deben sumar 100%.
+                Agrega hasta {MAX_BENEFICIARIES} beneficiarios. Los porcentajes deben sumar 100%.
+              </p>
+              <p className="text-white/40 text-xs italic">
+                Los beneficiarios menores de edad serán representados por medio de un albacea legal a favor del menor de edad.
               </p>
 
               {beneficiaries.map((b, i) => (
@@ -479,7 +592,7 @@ export default function ContractIntake() {
                       </button>
                     )}
                   </div>
-                  <Field label="Nombre completo" required>
+                  <Field label="Nombre completo" required hint="Como aparece en el acta de nacimiento e identificación oficial">
                     <TextInput value={b.fullName} onChange={(e) => updateBeneficiary(b._id, 'fullName', e.target.value)} />
                   </Field>
                   <div className="grid sm:grid-cols-2 gap-4">
@@ -492,32 +605,20 @@ export default function ContractIntake() {
                     </Field>
                   </div>
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <Field label="Tipo de identificación">
-                      <select value={b.idType} onChange={(e) => updateBeneficiary(b._id, 'idType', e.target.value)}
-                        className={inputClass}>
-                        <option value="">Selecciona…</option>
-                        {ID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                      </select>
+                    <Field label="Teléfono" required>
+                      <TextInput value={b.phone} onChange={(e) => updateBeneficiary(b._id, 'phone', e.target.value)} />
                     </Field>
-                    <Field label="Número de identificación">
-                      <TextInput value={b.idNumber} onChange={(e) => updateBeneficiary(b._id, 'idNumber', e.target.value)} />
-                    </Field>
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <Field label="Fecha de vencimiento de identificación">
-                      <TextInput type="date" value={b.idExpiry} onChange={(e) => updateBeneficiary(b._id, 'idExpiry', e.target.value)} />
-                    </Field>
-                    <Field label="Teléfono o email (opcional)">
-                      <TextInput value={b.contact} onChange={(e) => updateBeneficiary(b._id, 'contact', e.target.value)} />
+                    <Field label="Correo electrónico" required>
+                      <TextInput type="email" value={b.email} onChange={(e) => updateBeneficiary(b._id, 'email', e.target.value)} />
                     </Field>
                   </div>
                 </div>
               ))}
 
               <div className="flex gap-3">
-                <button type="button" onClick={addBeneficiary}
-                  className="flex-1 text-xs tracking-[0.1em] uppercase font-medium border border-white/15 text-white/75 hover:border-white/35 hover:text-white px-4 py-3 rounded-sm transition-all duration-300">
-                  + Agregar beneficiario
+                <button type="button" onClick={addBeneficiary} disabled={beneficiaries.length >= MAX_BENEFICIARIES}
+                  className="flex-1 text-xs tracking-[0.1em] uppercase font-medium border border-white/15 text-white/75 hover:border-white/35 hover:text-white px-4 py-3 rounded-sm transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-white/15 disabled:hover:text-white/75">
+                  {beneficiaries.length >= MAX_BENEFICIARIES ? `Máximo ${MAX_BENEFICIARIES} beneficiarios` : '+ Agregar beneficiario'}
                 </button>
                 <button type="button" onClick={distributeEvenly}
                   className="flex-1 text-xs tracking-[0.1em] uppercase font-medium border border-white/15 text-white/75 hover:border-white/35 hover:text-white px-4 py-3 rounded-sm transition-all duration-300">
@@ -536,32 +637,30 @@ export default function ContractIntake() {
               <SummarySection title="1. Datos generales del Mandante">
                 <SummaryRow label="Nombre completo" value={form.fullName} />
                 <SummaryRow label="Nacionalidad" value={form.nationality} />
+                <SummaryRow label="RFC / Tax ID" value={form.taxId} />
                 <SummaryRow label="Teléfono" value={form.phone} />
                 <SummaryRow label="Correo" value={form.email} />
-                <SummaryRow label="Domicilio" value={form.address} />
+                <SummaryRow label="Domicilio" value={fullAddress} />
               </SummarySection>
 
               <SummarySection title="2. Identificación oficial">
                 <SummaryRow label="Tipo" value={form.idType === 'Otro' ? form.idTypeOther : form.idType} />
-                <SummaryRow label="Número" value={form.idNumber} />
-                <SummaryRow label="Autoridad emisora" value={form.idIssuingAuthority} />
-                <SummaryRow label="Fecha de expedición" value={form.idIssueDate} />
-                <SummaryRow label="Fecha de vencimiento" value={form.idExpiryDate} />
               </SummarySection>
 
               <SummarySection title="3. Actividad económica y origen de fondos">
                 <SummaryRow label="Actividad económica" value={form.economicActivity === 'Otro' ? form.economicActivityOther : form.economicActivity} />
                 <SummaryRow label="Origen de los recursos" value={form.fundsOrigin === 'Otro' ? form.fundsOriginOther : form.fundsOrigin} />
-                <SummaryRow label="Descripción" value={form.activityDescription} />
               </SummarySection>
 
               <SummarySection title="4. Plan de Ahorro">
                 <SummaryRow label="Tipo de plan" value={form.planType} />
+                <SummaryRow label="Rendimiento" value={selectedPlan?.returnRate} />
+                <SummaryRow label="Plazo fijo" value={selectedPlan?.term} />
+                <SummaryRow label="Riesgo máximo de pérdida" value={selectedPlan?.maxLoss} />
                 <SummaryRow label="Aportación inicial" value={form.initialAmountNumber ? `${formatMoney(form.initialAmountNumber)} ${form.currency}` : ''} />
-                <SummaryRow label="Monto en letra" value={form.initialAmountWords} />
                 {form.currency === 'MXN' && (
                   <>
-                    <SummaryRow label="Equivalente en USD" value={usdEquivalent !== null ? `$${formatMoney(usdEquivalent)} USD` : 'Calculando…'} />
+                    <SummaryRow label="Equivalente en USD" value={usdEquivalent !== null ? `$${formatMoney(usdEquivalent)} USD*` : 'Calculando…'} />
                     <SummaryRow label="Tipo de cambio" value={exchangeRateLabel} />
                   </>
                 )}
@@ -574,9 +673,8 @@ export default function ContractIntake() {
                     <SummaryRow label="Nombre" value={b.fullName} />
                     <SummaryRow label="Parentesco" value={b.relationship} />
                     <SummaryRow label="Porcentaje" value={b.percentage ? `${b.percentage}%` : ''} />
-                    <SummaryRow label="Identificación" value={b.idType ? `${b.idType}${b.idNumber ? ' — ' + b.idNumber : ''}` : b.idNumber} />
-                    <SummaryRow label="Vencimiento ID" value={b.idExpiry} />
-                    <SummaryRow label="Contacto" value={b.contact} />
+                    <SummaryRow label="Teléfono" value={b.phone} />
+                    <SummaryRow label="Correo" value={b.email} />
                   </div>
                 ))}
               </SummarySection>

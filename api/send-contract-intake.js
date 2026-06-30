@@ -63,9 +63,8 @@ export default async function handler(req, res) {
     ${row('Nombre', b.fullName)}
     ${row('Parentesco', b.relationship)}
     ${row('Porcentaje', `${b.percentage}%`)}
-    ${row('Identificación', b.idType ? `${b.idType} — ${b.idNumber || ''}` : b.idNumber)}
-    ${row('Vencimiento ID', b.idExpiry)}
-    ${row('Contacto', b.contact)}
+    ${row('Teléfono', b.phone)}
+    ${row('Correo', b.email)}
   `).join('')
 
   const html = `<!DOCTYPE html>
@@ -90,32 +89,33 @@ export default async function handler(req, res) {
 
   ${section('1. Datos generales del Mandante', [
     row('Nacionalidad', m.nationality),
+    row('RFC / Tax ID', m.taxId),
     row('Teléfono', m.phone),
     row('Domicilio', m.address),
   ].join(''))}
 
   ${section('2. Identificación oficial', [
     row('Tipo', idType),
-    row('Número', m.idNumber),
-    row('Autoridad emisora', m.idIssuingAuthority),
-    row('Expedición', m.idIssueDate),
-    row('Vencimiento', m.idExpiryDate),
   ].join(''))}
 
   ${section('3. Actividad económica y origen de fondos', [
     row('Actividad económica', economicActivity),
     row('Origen de los recursos', fundsOrigin),
-    row('Descripción', m.activityDescription),
   ].join(''))}
 
   ${section('4. Plan de Ahorro', [
     row('Tipo de plan', m.planType),
+    row('Rendimiento', m.planReturnRate),
+    row('Plazo fijo', m.planTerm),
+    row('Riesgo máximo de pérdida', m.planMaxLoss),
+    row('Entrega de rendimiento', m.planPayout),
+    row('Penalización por retiro anticipado', m.planPenalty),
     row('Aportación inicial', m.initialAmountNumber),
-    row('Monto en letra', m.initialAmountWords),
     row('Divisa / activo', currency),
-    row('Equivalente USD', m.usdEquivalent),
+    row('Equivalente USD (aprox.)', m.usdEquivalent ? `${m.usdEquivalent} *` : ''),
     row('Tipo de cambio', m.exchangeRate),
   ].join(''))}
+  ${m.exchangeRate ? `<tr><td style="padding:0 0 24px"><p style="font-size:9px;color:#444;margin:0">* El monto final depende del día de la transferencia y puede variar según el tipo de cambio vigente ese día.</p></td></tr>` : ''}
 
   ${section('5. Beneficiarios', beneficiariesHtml)}
 
