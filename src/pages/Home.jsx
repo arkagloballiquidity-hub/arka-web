@@ -68,12 +68,16 @@ function CTAButton({ to, children, outline = false }) {
   )
 }
 
+const PLAN_COLORS = { flex20: '#5E97C2', fijo22: '#00A896', fijo25: '#C9A352' }
+
 function StrategyCard({ s, applyLabel, refLabel, subLabel, maxRiskLabel }) {
+  const color = PLAN_COLORS[s.id] || '#C9A352'
   return (
     <div className="flex flex-col p-7 rounded-xl border border-white/12 bg-black/55 backdrop-blur-md hover:border-white/22 hover:bg-black/65 transition-all duration-500 h-full">
       {/* Top section grows to fill — keeps divider anchored at same height */}
       <div className="flex-1 flex flex-col gap-5 mb-5">
-        <span className="self-start text-[8px] tracking-[0.3em] uppercase px-3 py-1 border border-white/20 rounded-full text-white/75">
+        <span className="self-start text-[8px] tracking-[0.3em] uppercase px-3 py-1 border rounded-full"
+          style={{ color, borderColor: `${color}55` }}>
           {s.profile}
         </span>
         <div>
@@ -84,14 +88,14 @@ function StrategyCard({ s, applyLabel, refLabel, subLabel, maxRiskLabel }) {
       {/* Divider — always at same distance from bottom */}
       <div className="border-t border-white/10 pt-5 mb-5">
         <p className="text-[8px] tracking-[0.25em] uppercase text-white/60 mb-2">{refLabel}</p>
-        <p className="text-4xl font-extralight text-white tracking-tight">{s.targetRef}</p>
+        <p className="text-4xl font-extralight tracking-tight" style={{ color }}>{s.targetRef}</p>
         <p className="text-[9px] text-white/55 mt-1.5">{subLabel}</p>
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/[0.07]">
           <span className="text-[8px] tracking-[0.25em] uppercase text-white/60">{maxRiskLabel}</span>
           <span className="text-sm font-light text-[#e0a3a3] tracking-tight">{s.maxRisk}</span>
         </div>
       </div>
-      <p className="text-xs text-white/78 leading-relaxed mb-5 text-justify">{s.idealFor}</p>
+      <p className="flex-1 text-xs text-white/78 leading-relaxed mb-5 text-justify">{s.idealFor}</p>
       <Link to="/contact" className="text-[9px] tracking-[0.2em] uppercase text-white/70 border border-white/18 hover:border-[#004C45]/60 hover:text-white px-5 py-3 text-center transition-all duration-300 rounded-sm">
         {applyLabel}
       </Link>

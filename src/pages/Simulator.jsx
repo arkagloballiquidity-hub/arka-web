@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useLang } from '@/context/LanguageContext'
+import { useFxRate } from '@/hooks/useFxRate'
 
 // ── Fixed-term plans — canonical data (mirrors ContractIntake.jsx) ──────────
 const PLANS = [
@@ -10,18 +11,17 @@ const PLANS = [
     term: { en: '6 months', es: '6 meses' },
   },
   {
-    id: 'fijo22', name: 'Fijo 22/1', color: '#C9A352',
+    id: 'fijo22', name: 'Fijo 22/1', color: '#00A896',
     rate: 0.22, maxLoss: 0.075, termDays: 366, termMonths: 12,
     term: { en: '12 months', es: '12 meses' },
   },
   {
-    id: 'fijo25', name: 'Fijo 25/2', color: '#9B6FD4',
+    id: 'fijo25', name: 'Fijo 25/2', color: '#C9A352',
     rate: 0.25, maxLoss: 0.10, termDays: 731, termMonths: 24,
     term: { en: '24 months', es: '24 meses' },
   },
 ]
-const MIN_USD  = 28571.42
-const MXN_RATE = 17.5
+const MIN_MXN = 500000
 const BENCH = { sp500: 0.108, cetes: 0.097, bank: 0.045 }
 
 // ARKA plans pay simple interest, prorated by day count over the fixed term —
@@ -167,6 +167,8 @@ function GoldValue({ children, className = '' }) {
 export default function Simulator() {
   const { lang } = useLang()
   const isEs = lang === 'es'
+  const { rate: fxRate } = useFxRate()
+  const minUsd = MIN_MXN / fxRate
 
   const [planId, setPlanId] = useState('fijo22')
   const [amount, setAmount] = useState(50000)
@@ -264,7 +266,7 @@ export default function Simulator() {
       penaltyNote: '25% penalty on accrued returns if withdrawn early',
       calc: 'Maturity Calculator',
       amount: 'Investment Amount',
-      minNote: `Minimum $${fmtUSD(MIN_USD).replace('$', '')} USD (≈ $500,000 MXN)`,
+      minNote: `Minimum ${fmtUSD(minUsd)} USD (≈ ${fmtUSD(MIN_MXN)} MXN)`,
       principal: 'Principal',
       fixedReturn: 'Fixed Return',
       atMaturity: 'Capital at Maturity',
@@ -304,7 +306,7 @@ export default function Simulator() {
       penaltyNote: 'Penalización del 25% sobre rendimientos acumulados si se retira antes',
       calc: 'Calculadora de Vencimiento',
       amount: 'Monto a Invertir',
-      minNote: 'Mínimo $28,571 USD (≈ $500,000 MXN)',
+      minNote: `Mínimo ${fmtUSD(minUsd)} USD (≈ ${fmtUSD(MIN_MXN)} MXN)`,
       principal: 'Capital Inicial',
       fixedReturn: 'Rendimiento Fijo',
       atMaturity: 'Capital al Vencimiento',
@@ -374,7 +376,7 @@ export default function Simulator() {
                   </div>
                   <div className="space-y-2 pt-3 border-t border-white/[0.07] text-[11px]">
                     <div className="flex justify-between"><span className="text-white/45">{tx.maxRisk}</span><span className="text-white/70 tabular-nums">−{pct(p.maxLoss)}</span></div>
-                    <div className="flex justify-between"><span className="text-white/45">{tx.minInvestment}</span><span className="text-white/70">$28,571 USD</span></div>
+                    <div className="flex justify-between"><span className="text-white/45">{tx.minInvestment}</span><span className="text-white/70">{fmtUSD(minUsd)} USD</span></div>
                     <div className="flex justify-between"><span className="text-white/45">{tx.payoutDay}</span><span className="text-white/70">{p.termDays}</span></div>
                   </div>
                   <p className="text-[9px] text-white/30 leading-relaxed pt-1">{tx.penaltyNote}</p>
@@ -402,10 +404,10 @@ export default function Simulator() {
               <p className="text-[10px] tracking-[0.28em] uppercase text-white/55">{tx.calc} — <span style={{ color: plan.color }}>{plan.name}</span></p>
 
               <div className="space-y-6 p-6 rounded-xl border border-white/8 bg-white/[0.03]">
-                <Slider label={tx.amount} value={amount} min={Math.round(MIN_USD)} max={2000000} step={1000}
+                <Slider label={tx.amount} value={amount} min={Math.round(minUsd)} max={2000000} step={1000}
                   onChange={setAmount} fmt={v => fmtUSD(v)} />
                 <p className="text-[10px] text-white/35 leading-relaxed">
-                  {tx.minNote} · ≈ ${Math.round(amount * MXN_RATE).toLocaleString('en-US')} MXN
+                  {tx.minNote} · ≈ ${Math.round(amount * fxRate).toLocaleString('en-US')} MXN
                 </p>
               </div>
 

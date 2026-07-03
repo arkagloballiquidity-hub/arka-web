@@ -28,9 +28,9 @@ export const NAV_LINKS = [
   { label: 'Contact', href: '/contact' },
 ]
 
-// Segment: qualified investors — minimum $500,000 MXN (≈ $28,571.42 USD, ref. FX ~17.5)
+// Segment: qualified investors — minimum $500,000 MXN. USD-equivalent is
+// computed live from the USDT/MXN reference rate (see src/hooks/useFxRate.js).
 export const PLAN_MIN_MXN = 500000
-export const PLAN_MIN_USD = 28571.42
 
 export const STRATEGIES = [
   {
@@ -43,8 +43,6 @@ export const STRATEGIES = [
     objectiveEs: 'Rendimiento fijo del 20% anual a un plazo de 6 meses.',
     targetRef: '20% annual',
     targetRefEs: '20% anual',
-    minInvestment: '$500,000 MXN (≈ $28,571 USD) minimum',
-    minInvestmentEs: '$500,000 MXN (≈ $28,571 USD) mínimo',
     payout: 'Paid at day 183, counted from the investment lot execution date.',
     payoutEs: 'Se entrega el día 183, contado desde la fecha de ejecución del lote de inversión.',
     penalty: 'Early withdrawal forfeits 25% of the returns accrued to date.',
@@ -66,8 +64,6 @@ export const STRATEGIES = [
     objectiveEs: 'Rendimiento fijo del 22% anual a un plazo de 12 meses.',
     targetRef: '22% annual',
     targetRefEs: '22% anual',
-    minInvestment: '$500,000 MXN (≈ $28,571 USD) minimum',
-    minInvestmentEs: '$500,000 MXN (≈ $28,571 USD) mínimo',
     payout: 'Paid at day 366, counted from the investment lot execution date.',
     payoutEs: 'Se entrega el día 366, contado desde la fecha de ejecución del lote de inversión.',
     penalty: 'Early withdrawal forfeits 25% of the returns accrued to date.',
@@ -89,8 +85,6 @@ export const STRATEGIES = [
     objectiveEs: 'Rendimiento fijo del 25% anual a un plazo de 24 meses.',
     targetRef: '25% annual',
     targetRefEs: '25% anual',
-    minInvestment: '$500,000 MXN (≈ $28,571 USD) minimum',
-    minInvestmentEs: '$500,000 MXN (≈ $28,571 USD) mínimo',
     payout: 'Paid at day 731, counted from the investment lot execution date.',
     payoutEs: 'Se entrega el día 731, contado desde la fecha de ejecución del lote de inversión.',
     penalty: 'Early withdrawal forfeits 25% of the returns accrued to date.',
@@ -155,14 +149,14 @@ export const MARKETS = [
 ]
 
 export const LEGAL_DOCUMENTS = [
-  { title: 'AML / KYC Policy', slug: 'aml-kyc' },
-  { title: 'Privacy Policy', slug: 'privacy' },
-  { title: 'General Terms & Contracting Process', slug: 'terms' },
-  { title: 'Risk Disclosure', slug: 'risk-disclosure' },
-  { title: 'Website Disclaimer', slug: 'disclaimer' },
-  { title: 'Restricted Jurisdictions', slug: 'jurisdictions' },
-  { title: 'Investor Qualification Notice', slug: 'qualification' },
-  { title: 'Confidentiality Notice', slug: 'confidentiality' },
+  { title: 'AML / KYC Policy', titleEs: 'Política AML / KYC', slug: 'aml-kyc' },
+  { title: 'Privacy Policy', titleEs: 'Aviso de Privacidad', slug: 'privacy' },
+  { title: 'General Terms & Contracting Process', titleEs: 'Términos Generales y Proceso de Contratación', slug: 'terms' },
+  { title: 'Risk Disclosure', titleEs: 'Divulgación de Riesgos', slug: 'risk-disclosure' },
+  { title: 'Website Disclaimer', titleEs: 'Aviso Legal del Sitio', slug: 'disclaimer' },
+  { title: 'Governing Law & Jurisdiction', titleEs: 'Ley Aplicable y Jurisdicción', slug: 'jurisdictions' },
+  { title: 'Investor Qualification Notice', titleEs: 'Aviso de Calificación del Inversionista', slug: 'qualification' },
+  { title: 'Confidentiality Notice', titleEs: 'Aviso de Confidencialidad', slug: 'confidentiality' },
 ]
 
 export const OFFICES = [

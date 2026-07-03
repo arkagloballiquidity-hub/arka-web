@@ -2,6 +2,12 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLang } from '@/context/LanguageContext'
+import { useFxRate } from '@/hooks/useFxRate'
+
+const MIN_MXN = 500000
+function fmtUSD(n) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+}
 
 // ── Questions — horizon, liquidity need, and commitment tolerance ───────────
 // Each option scores 0 (short-term lean) to 2 (long-term lean). Max score: 12.
@@ -92,19 +98,19 @@ const MAX_SCORE = TOTAL_QUESTIONS * 2
 const PLANS = [
   {
     id: 'flex20', name: 'Flex 20', color: '#5E97C2',
-    rate: 0.20, maxLoss: 0.05, termDays: 183, minInvestment: '$28,571 USD (≈ $500,000 MXN)',
+    rate: 0.20, maxLoss: 0.05, termDays: 183,
     en: { term: '6-month term', reason: 'Your priority is flexibility and shorter-term liquidity — Flex 20 gives you a fixed institutional return without a long lock-up.' },
     es: { term: 'Plazo de 6 meses', reason: 'Tu prioridad es la flexibilidad y la liquidez a corto plazo — Flex 20 te da un rendimiento fijo institucional sin un compromiso prolongado.' },
   },
   {
-    id: 'fijo22', name: 'Fijo 22/1', color: '#C9A352',
-    rate: 0.22, maxLoss: 0.075, termDays: 366, minInvestment: '$28,571 USD (≈ $500,000 MXN)',
+    id: 'fijo22', name: 'Fijo 22/1', color: '#00A896',
+    rate: 0.22, maxLoss: 0.075, termDays: 366,
     en: { term: '12-month term', reason: 'You are comfortable with a one-year commitment in exchange for a higher fixed annual rate — Fijo 22/1 is a balanced fit.' },
     es: { term: 'Plazo de 12 meses', reason: 'Te sientes cómodo con un compromiso de un año a cambio de una tasa anual fija más alta — Fijo 22/1 es un equilibrio adecuado.' },
   },
   {
-    id: 'fijo25', name: 'Fijo 25/2', color: '#9B6FD4',
-    rate: 0.25, maxLoss: 0.10, termDays: 731, minInvestment: '$28,571 USD (≈ $500,000 MXN)',
+    id: 'fijo25', name: 'Fijo 25/2', color: '#C9A352',
+    rate: 0.25, maxLoss: 0.10, termDays: 731,
     en: { term: '24-month term', reason: 'You prioritize maximizing the fixed reference rate and are comfortable locking capital for the long term — Fijo 25/2 offers ARKA’s highest fixed annual rate.' },
     es: { term: 'Plazo de 24 meses', reason: 'Buscas maximizar la tasa de referencia fija y te sientes cómodo inmovilizando capital a largo plazo — Fijo 25/2 ofrece la tasa anual fija más alta de ARKA.' },
   },
@@ -120,6 +126,8 @@ function getRecommendation(score) {
 export default function Profiler() {
   const { lang } = useLang()
   const navigate = useNavigate()
+  const { rate: fxRate } = useFxRate()
+  const minInvestmentLabel = `${fmtUSD(MIN_MXN / fxRate)} USD (≈ ${fmtUSD(MIN_MXN)} MXN)`
   const [step, setStep]         = useState(0)
   const [answers, setAnswers]   = useState({})
   const [selected, setSelected] = useState(null)
@@ -184,7 +192,7 @@ export default function Profiler() {
             term:          pData.term,
             rate:          `${(plan.rate * 100).toFixed(0)}%`,
             maxLoss:       `${(plan.maxLoss * 100).toFixed(1)}%`,
-            minInvestment: plan.minInvestment,
+            minInvestment: minInvestmentLabel,
             reason:        pData.reason,
             score:         totalScore,
           },
@@ -409,7 +417,7 @@ export default function Profiler() {
                 <div className="p-6 rounded-xl border border-white/8 bg-white/[0.03] space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] tracking-[0.28em] uppercase text-white/50">{tx.minInvestment}</span>
-                    <span className="text-white/85 text-sm">{plan.minInvestment}</span>
+                    <span className="text-white/85 text-sm">{minInvestmentLabel}</span>
                   </div>
                   <div className="h-px bg-white/[0.06]" />
                   <div className="space-y-1.5">

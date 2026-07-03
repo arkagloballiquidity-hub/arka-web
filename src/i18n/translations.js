@@ -284,6 +284,9 @@ export const translations = {
       reg_pending: 'Registration number to be confirmed before public deployment.',
       entity_mid: ' is the investment brand within the ARKA ecosystem. ',
       entity_end: ' acts as the legal/operating entity where applicable.',
+      download_pdf: 'Download PDF',
+      source_label: 'Source document',
+      official_lang_note: 'Official language: Spanish. In case of discrepancy between language versions, the Spanish version prevails.',
     },
 
     markets: {
@@ -638,6 +641,9 @@ export const translations = {
       reg_pending: 'Número de registro por confirmar antes del despliegue público.',
       entity_mid: ' es la marca de inversión dentro del ecosistema ARKA. ',
       entity_end: ' actúa como la entidad legal/operativa cuando corresponde.',
+      download_pdf: 'Descargar PDF',
+      source_label: 'Documento fuente',
+      official_lang_note: 'Idioma oficial: español. En caso de discrepancia entre versiones en distintos idiomas, prevalecerá la versión en español.',
     },
 
     markets: {

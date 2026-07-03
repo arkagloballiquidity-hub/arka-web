@@ -9,7 +9,7 @@ const SITE   = 'https://www.arkaglobalinvestments.com'
 const CONTACT_EMAIL = 'contacto@arkaltd.io'
 
 // Plan accent colors (shared with the site + simulator email)
-const PLAN_COLORS = { flex20: '#5E97C2', fijo22: '#C9A352', fijo25: '#9B6FD4' }
+const PLAN_COLORS = { flex20: '#5E97C2', fijo22: '#00A896', fijo25: '#C9A352' }
 function planColor(id) { return PLAN_COLORS[id] || '#C9A352' }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
