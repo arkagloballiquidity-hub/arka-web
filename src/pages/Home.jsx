@@ -198,9 +198,9 @@ export default function Home() {
   }, [])
 
   const STRATEGIES = [
-    { id: 'foundation', profile: t('strategies','foundation_profile'), name: t('strategies','foundation_name'), objective: t('strategies','foundation_obj'), targetRef: t('strategies','foundation_target'), idealFor: t('strategies','foundation_ideal'), maxRisk: t('strategies','foundation_maxrisk') },
-    { id: 'growth',     profile: t('strategies','growth_profile'),     name: t('strategies','growth_name'),     objective: t('strategies','growth_obj'),     targetRef: t('strategies','growth_target'),     idealFor: t('strategies','growth_ideal'),     maxRisk: t('strategies','growth_maxrisk') },
-    { id: 'alpha',      profile: t('strategies','alpha_profile'),      name: t('strategies','alpha_name'),      objective: t('strategies','alpha_obj'),      targetRef: t('strategies','alpha_target'),      idealFor: t('strategies','alpha_ideal'),      maxRisk: t('strategies','alpha_maxrisk') },
+    { id: 'flex20', profile: t('strategies','flex20_profile'), name: t('strategies','flex20_name'), objective: t('strategies','flex20_obj'), targetRef: t('strategies','flex20_target'), idealFor: t('strategies','flex20_ideal'), maxRisk: t('strategies','flex20_maxrisk') },
+    { id: 'fijo22', profile: t('strategies','fijo22_profile'), name: t('strategies','fijo22_name'), objective: t('strategies','fijo22_obj'), targetRef: t('strategies','fijo22_target'), idealFor: t('strategies','fijo22_ideal'), maxRisk: t('strategies','fijo22_maxrisk') },
+    { id: 'fijo25', profile: t('strategies','fijo25_profile'), name: t('strategies','fijo25_name'), objective: t('strategies','fijo25_obj'), targetRef: t('strategies','fijo25_target'), idealFor: t('strategies','fijo25_ideal'), maxRisk: t('strategies','fijo25_maxrisk') },
   ]
   const isEs = lang === 'es'
   const RISK_METRICS = SITE_RISK_METRICS.map(m => ({

@@ -28,64 +28,86 @@ export const NAV_LINKS = [
   { label: 'Contact', href: '/contact' },
 ]
 
+// Segment: qualified investors — minimum $500,000 MXN (≈ $28,571.42 USD, ref. FX ~17.5)
+export const PLAN_MIN_MXN = 500000
+export const PLAN_MIN_USD = 28571.42
+
 export const STRATEGIES = [
   {
-    id: 'foundation',
-    name: 'ARKA Foundation Strategy',
-    nameEs: 'Estrategia Fundación ARKA',
-    profile: 'Conservative',
-    profileEs: 'Conservadora',
-    objective: 'Capital preservation and stable long-term growth.',
-    objectiveEs: 'Preservación de capital y crecimiento estable a largo plazo.',
-    targetRef: '18% annual objective',
-    targetRefEs: 'Objetivo anual del 18%',
-    idealFor: 'Long-term private capital, conservative investors, family offices.',
-    idealForEs: 'Capital privado a largo plazo, inversores conservadores, family offices.',
+    id: 'flex20',
+    name: 'Flex 20',
+    nameEs: 'Flex 20',
+    profile: '6-Month Term',
+    profileEs: 'Plazo de 6 Meses',
+    objective: 'Fixed 20% annual return over a 6-month investment term.',
+    objectiveEs: 'Rendimiento fijo del 20% anual a un plazo de 6 meses.',
+    targetRef: '20% annual',
+    targetRefEs: '20% anual',
+    minInvestment: '$500,000 MXN (≈ $28,571 USD) minimum',
+    minInvestmentEs: '$500,000 MXN (≈ $28,571 USD) mínimo',
+    payout: 'Paid at day 183, counted from the investment lot execution date.',
+    payoutEs: 'Se entrega el día 183, contado desde la fecha de ejecución del lote de inversión.',
+    penalty: 'Early withdrawal forfeits 25% of the returns accrued to date.',
+    penaltyEs: 'El retiro anticipado penaliza con el 25% de los rendimientos acumulados a la fecha.',
+    idealFor: 'Qualified investors seeking shorter commitment cycles without sacrificing a fixed institutional return.',
+    idealForEs: 'Inversores calificados que buscan ciclos de compromiso más cortos sin sacrificar un rendimiento fijo institucional.',
     description:
-      'A disciplined capital allocation strategy focused on stability, consistency, and long-term capital preservation through systematic global market exposure.',
+      'A fixed-term plan designed for investors who want their capital locked for 6-month cycles — the most flexible entry point into ARKA’s fixed-return platform.',
     descriptionEs:
-      'Una estrategia disciplinada de asignación de capital enfocada en la estabilidad, la consistencia y la preservación de capital a largo plazo mediante exposición sistemática a los mercados globales.',
+      'Plan diseñado para personas que quieran tener su dinero fijo por periodos de 6 meses — la puerta de entrada más flexible a la plataforma de rendimiento fijo de ARKA.',
   },
   {
-    id: 'growth',
-    name: 'ARKA Strategic Growth',
-    nameEs: 'Crecimiento Estratégico ARKA',
-    profile: 'Moderate',
-    profileEs: 'Moderada',
-    objective: 'Capital appreciation with controlled institutional exposure.',
-    objectiveEs: 'Apreciación de capital con exposición institucional controlada.',
-    targetRef: '24% annual objective',
-    targetRefEs: 'Objetivo anual del 24%',
-    idealFor: 'Entrepreneurs, experienced investors, private capital allocators.',
-    idealForEs: 'Empresarios, inversores experimentados, asignadores de capital privado.',
+    id: 'fijo22',
+    name: 'Fijo 22/1',
+    nameEs: 'Fijo 22/1',
+    profile: '12-Month Term',
+    profileEs: 'Plazo de 12 Meses',
+    objective: 'Fixed 22% annual return over a 12-month investment term.',
+    objectiveEs: 'Rendimiento fijo del 22% anual a un plazo de 12 meses.',
+    targetRef: '22% annual',
+    targetRefEs: '22% anual',
+    minInvestment: '$500,000 MXN (≈ $28,571 USD) minimum',
+    minInvestmentEs: '$500,000 MXN (≈ $28,571 USD) mínimo',
+    payout: 'Paid at day 366, counted from the investment lot execution date.',
+    payoutEs: 'Se entrega el día 366, contado desde la fecha de ejecución del lote de inversión.',
+    penalty: 'Early withdrawal forfeits 25% of the returns accrued to date.',
+    penaltyEs: 'El retiro anticipado penaliza con el 25% de los rendimientos acumulados a la fecha.',
+    idealFor: 'Investors comfortable with a one-year lock, seeking a balanced step-up in fixed annual return.',
+    idealForEs: 'Inversores cómodos con un plazo de un año que buscan un incremento equilibrado en el rendimiento anual fijo.',
     description:
-      'An actively managed portfolio designed to enhance capital appreciation through dynamic global market positioning, quantitative research, and institutional risk management.',
+      'A fixed-term plan designed for investors who want their capital locked for a full year — a balanced step between flexibility and maximum reference rate.',
     descriptionEs:
-      'Un portafolio gestionado activamente diseñado para potenciar la apreciación de capital mediante posicionamiento dinámico en los mercados globales, investigación cuantitativa y gestión institucional del riesgo.',
+      'Plan diseñado para personas que quieran tener su dinero fijo durante 1 año — un punto de equilibrio entre flexibilidad y la tasa de referencia más alta.',
   },
   {
-    id: 'alpha',
-    name: 'ARKA Alpha Force',
-    nameEs: 'ARKA Alpha Force',
-    profile: 'Active / Quantitative',
-    profileEs: 'Activa / Cuantitativa',
-    objective: 'Capture market inefficiencies through quantitative models and systematic execution.',
-    objectiveEs: 'Capturar ineficiencias de mercado mediante modelos cuantitativos y ejecución sistemática.',
-    targetRef: '36% annual objective',
-    targetRefEs: 'Objetivo anual del 36%',
-    idealFor: 'HNWI, family offices, alternative strategy investors.',
-    idealForEs: 'HNWI, family offices, inversores en estrategias alternativas.',
+    id: 'fijo25',
+    name: 'Fijo 25/2',
+    nameEs: 'Fijo 25/2',
+    profile: '24-Month Term',
+    profileEs: 'Plazo de 24 Meses',
+    objective: 'Fixed 25% annual return over a 24-month investment term.',
+    objectiveEs: 'Rendimiento fijo del 25% anual a un plazo de 24 meses.',
+    targetRef: '25% annual',
+    targetRefEs: '25% anual',
+    minInvestment: '$500,000 MXN (≈ $28,571 USD) minimum',
+    minInvestmentEs: '$500,000 MXN (≈ $28,571 USD) mínimo',
+    payout: 'Paid at day 731, counted from the investment lot execution date.',
+    payoutEs: 'Se entrega el día 731, contado desde la fecha de ejecución del lote de inversión.',
+    penalty: 'Early withdrawal forfeits 25% of the returns accrued to date.',
+    penaltyEs: 'El retiro anticipado penaliza con el 25% de los rendimientos acumulados a la fecha.',
+    idealFor: 'Long-term private capital and family offices seeking ARKA’s highest fixed-term reference rate.',
+    idealForEs: 'Capital privado de largo plazo y family offices que buscan la tasa de referencia fija más alta de la plataforma ARKA.',
     description:
-      'A performance-oriented strategy seeking superior risk-adjusted returns by capturing market inefficiencies through advanced quantitative models, systematic execution, and opportunistic allocation.',
+      'A fixed-term plan designed for investors who want their capital locked for 2 years — ARKA’s highest fixed annual reference rate for qualified long-term capital.',
     descriptionEs:
-      'Una estrategia orientada al rendimiento que busca retornos superiores ajustados al riesgo capturando ineficiencias de mercado mediante modelos cuantitativos avanzados, ejecución sistemática y asignación oportunista.',
+      'Plan diseñado para personas que quieran tener su dinero fijo durante 2 años — la tasa anual de referencia más alta de ARKA para capital calificado de largo plazo.',
   },
 ]
 
 // ⚠️  Risk references — editable, not promises.
 export const RISK_METRICS = [
   { key: 'intraday',  labelEn: 'Intraday Drawdown Limit',       labelEs: 'Límite de Drawdown Intradía',       value: '-0.10% to -0.50% per session',                       valueEs: '-0.10% a -0.50% por sesión' },
-  { key: 'portfolio', labelEn: 'Portfolio Stop Framework',       labelEs: 'Marco de Stop de Portafolio',        value: '-5% to -10%',                                        valueEs: '-5% a -10%' },
+  { key: 'portfolio', labelEn: 'Portfolio Stop Framework',       labelEs: 'Marco de Stop de Portafolio',        value: '-5% to -10% (plan-dependent)',                       valueEs: '-5% a -10% (según plan)' },
   { key: 'leverage',  labelEn: 'Maximum Leverage Reference',     labelEs: 'Referencia de Apalancamiento Máximo', value: '1:100 with continuous margin monitoring',            valueEs: '1:100 con monitoreo continuo de margen' },
   { key: 'var',       labelEn: 'VaR Methodology',                labelEs: 'Metodología VaR',                    value: 'Value at Risk — daily & portfolio level',            valueEs: 'Value at Risk — nivel diario y de portafolio' },
   { key: 'session',   labelEn: 'Session-Based Controls',         labelEs: 'Controles por Sesión',               value: 'New York session primary window',                    valueEs: 'Ventana primaria: sesión de Nueva York' },
@@ -167,7 +189,7 @@ export const GLOBAL_DISCLAIMER_ES =
   'Este sitio web es solo para fines informativos y no constituye una oferta de venta de valores, asesoramiento financiero, legal, fiscal ni solicitud de inversión. La participación está disponible únicamente para participantes calificados, sujeto a revisión de elegibilidad, restricciones jurisdiccionales, procedimientos KYC/AML y ejecución de documentos legales aplicables. Las estrategias de inversión implican riesgo, incluyendo la posible pérdida de capital. Los rendimientos objetivo, resultados históricos, simulaciones o proyecciones no son garantía de rendimiento futuro.'
 
 export const STRATEGY_DISCLAIMER =
-  'Target objectives are not guaranteed. Past performance, simulations, models, or internal references do not guarantee future results. Investing involves risk, including possible loss of capital.'
+  'Fixed annual rates are contractual references, not guarantees of performance. Early withdrawal before the completed term forfeits 25% of the returns accrued to date. Investing involves risk, including possible loss of capital up to the maximum reference per plan.'
 
 export const STRATEGY_DISCLAIMER_ES =
-  'Los objetivos no están garantizados. El rendimiento pasado, las simulaciones, los modelos o las referencias internas no garantizan resultados futuros. Invertir implica riesgo, incluyendo la posible pérdida de capital.'
+  'Las tasas anuales fijas son referencias contractuales, no garantías de rendimiento. El retiro anticipado antes de completar el plazo penaliza con el 25% de los rendimientos acumulados a la fecha. Invertir implica riesgo, incluyendo la posible pérdida de capital hasta el máximo de referencia por plan.'

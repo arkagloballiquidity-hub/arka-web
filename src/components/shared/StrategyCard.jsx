@@ -3,9 +3,9 @@ import { cn } from '@/lib/utils'
 import { useLang } from '@/context/LanguageContext'
 
 const profileColors = {
-  Conservative:        'text-[#94A3B8] border-[#1E293B]',
-  Moderate:            'text-[#CBD5E1] border-[#334155]',
-  'Active / Quantitative': 'text-white border-[#475569]',
+  '6-Month Term':  'text-[#5E97C2] border-[#5E97C2]/30',
+  '12-Month Term': 'text-[#C9A352] border-[#C9A352]/30',
+  '24-Month Term': 'text-[#9B6FD4] border-[#9B6FD4]/30',
 }
 
 export default function StrategyCard({ strategy, featured = false }) {
@@ -26,7 +26,7 @@ export default function StrategyCard({ strategy, featured = false }) {
         <span
           className={cn(
             'text-[9px] tracking-[0.3em] uppercase px-3 py-1 border rounded-full',
-            profileColors[strategy.profile] || profileColors.Conservative
+            profileColors[strategy.profile] || profileColors['6-Month Term']
           )}
         >
           {isEs ? strategy.profileEs : strategy.profile}
@@ -55,11 +55,22 @@ export default function StrategyCard({ strategy, featured = false }) {
         <span className="text-sm font-light text-[#e0a3a3]">{t('strategies', `${strategy.id}_maxrisk`)}</span>
       </div>
 
+      {/* Minimum investment */}
+      <div className="flex items-center justify-between border-t border-[#1E293B] pt-4">
+        <span className="text-[9px] tracking-[0.25em] uppercase text-[#94A3B8]">{t('strategiesPage', 'min_investment_label')}</span>
+        <span className="text-sm font-light text-white">{isEs ? strategy.minInvestmentEs : strategy.minInvestment}</span>
+      </div>
+
       {/* Ideal for */}
       <div className="space-y-1">
         <p className="text-[9px] tracking-[0.25em] uppercase text-[#94A3B8]">{t('strategies', 'ideal_label')}</p>
         <p className="text-sm text-[#94A3B8]">{isEs ? strategy.idealForEs : strategy.idealFor}</p>
       </div>
+
+      {/* Early withdrawal penalty */}
+      <p className="text-[10px] text-[#e0a3a3]/85 leading-relaxed border-t border-[#1E293B] pt-4">
+        ⚠ {isEs ? strategy.penaltyEs : strategy.penalty}
+      </p>
 
       <Link
         to="/contact"

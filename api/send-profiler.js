@@ -8,16 +8,9 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const SITE   = 'https://www.arkaglobalinvestments.com'
 const CONTACT_EMAIL = 'contacto@arkaltd.io'
 
-// Risk-tier accent colors (shared with the site + simulator email)
-const RISK_COLORS = ['#5E97C2', '#46B58F', '#C9A352', '#E0705A', '#9B6FD4']
-function riskColor(f, g, a) {
-  const rate = (f * 0.18 + g * 0.24 + a * 0.36) / 100 * 100
-  if (rate <= 20)   return RISK_COLORS[0]
-  if (rate <= 23)   return RISK_COLORS[1]
-  if (rate <= 27.5) return RISK_COLORS[2]
-  if (rate <= 33)   return RISK_COLORS[3]
-  return RISK_COLORS[4]
-}
+// Plan accent colors (shared with the site + simulator email)
+const PLAN_COLORS = { flex20: '#5E97C2', fijo22: '#C9A352', fijo25: '#9B6FD4' }
+function planColor(id) { return PLAN_COLORS[id] || '#C9A352' }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 let montserratBoldBytes, montserratRegBytes, montserratLightBytes, logoPngBytes
@@ -52,8 +45,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST')   return res.status(405).end()
 
-  const { name, email, profile } = req.body || {}
-  if (!email || !profile)
+  const { name, email, plan } = req.body || {}
+  if (!email || !plan)
     return res.status(400).json({ error: 'Missing required fields' })
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email)))
     return res.status(400).json({ error: 'Invalid email' })
@@ -61,14 +54,14 @@ export default async function handler(req, res) {
   const safeName  = String(name || 'Investor').replace(/[<>&"']/g, '')
   const firstName = safeName.split(' ')[0]
 
-  const pdfBuffer = await buildPDF({ firstName, profile })
+  const pdfBuffer = await buildPDF({ firstName, plan })
 
   const { error: mailErr } = await resend.emails.send({
     from:    process.env.RESEND_FROM || 'ARKA Global Investments <noreply@arkaglobalinvestments.com>',
     to:      email,
-    subject: `ARKA — Your Investor Profile: ${esc(profile.name)}`,
-    html:    buildEmail({ firstName, profile }),
-    attachments: [{ filename: 'ARKA-Investor-Profile.pdf', content: Buffer.from(pdfBuffer).toString('base64') }],
+    subject: `ARKA — Your Recommended Plan: ${esc(plan.name)}`,
+    html:    buildEmail({ firstName, plan }),
+    attachments: [{ filename: 'ARKA-Recommended-Plan.pdf', content: Buffer.from(pdfBuffer).toString('base64') }],
   })
 
   if (mailErr) {
@@ -79,24 +72,23 @@ export default async function handler(req, res) {
   await sendTelegram(
     `🎯 <b>Nuevo Perfil — ARKA</b>\n\n` +
     `👤 ${esc(name || '(sin nombre)')}\n📧 ${esc(email)}\n\n` +
-    `📋 Perfil: <b>${esc(profile.name)}</b>\n` +
-    `💹 Tasa referencia: <b>${esc(profile.rate)}</b>\n` +
-    `📊 Estrategia: <b>${esc(profile.strategy)}</b>\n` +
-    `🔢 Score: <b>${profile.score} / 200</b>\n` +
-    `🔀 Asignación: Foundation ${profile.alloc?.foundation}% · Growth ${profile.alloc?.growth}% · Alpha ${profile.alloc?.alpha}%`
+    `📋 Plan recomendado: <b>${esc(plan.name)}</b> (${esc(plan.term)})\n` +
+    `💹 Tasa fija: <b>${esc(plan.rate)}</b>\n` +
+    `⚠️ Riesgo máximo: <b>${esc(plan.maxLoss)}</b>\n` +
+    `🔢 Score: <b>${plan.score} / 12</b>`
   )
 
   return res.status(200).json({ sent: true })
 }
 
 // ── Email template ────────────────────────────────────────────────────────────
-function buildEmail({ firstName, profile }) {
-  const alloc = profile.alloc || {}
-  const accent = riskColor(alloc.foundation || 0, alloc.growth || 0, alloc.alpha || 0)
-  const allocBars = [
-    { label: 'Foundation',       val: alloc.foundation || 0, rate: '18%', color: accent },
-    { label: 'Strategic Growth', val: alloc.growth     || 0, rate: '24%', color: accent },
-    { label: 'Alpha Force',      val: alloc.alpha      || 0, rate: '36%', color: accent },
+function buildEmail({ firstName, plan }) {
+  const accent = planColor(plan.id)
+  const detailRows = [
+    { label: 'Term',              value: plan.term },
+    { label: 'Fixed Annual Rate', value: plan.rate },
+    { label: 'Maximum Risk',      value: `−${plan.maxLoss}` },
+    { label: 'Minimum Investment', value: plan.minInvestment },
   ]
 
   return `<!DOCTYPE html>
@@ -125,73 +117,46 @@ function buildEmail({ firstName, profile }) {
 
   <!-- Greeting -->
   <tr><td style="padding:32px 0 20px">
-    <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#444;margin:0 0 16px">Investor Risk Profile</p>
+    <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#444;margin:0 0 16px">Investor Plan Profile</p>
     <h1 style="font-size:22px;font-weight:300;margin:0 0 12px;color:#fff">Hello, ${esc(firstName)}.</h1>
     <p style="font-size:14px;color:#888;line-height:1.8;margin:0">
-      Based on your responses, we have identified your investor profile within <strong style="color:#ccc">ARKA Global Investments</strong>.
+      Based on your responses, we have identified your recommended fixed-term plan within <strong style="color:#ccc">ARKA Global Investments</strong>.
     </p>
   </td></tr>
 
-  <!-- Profile card -->
+  <!-- Plan card -->
   <tr><td style="padding:0 0 20px">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td style="padding:28px 24px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;text-align:center;border-left:3px solid ${accent}">
-        <p style="font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:#444;margin:0 0 12px">Your Investor Profile</p>
-        <p style="font-size:30px;font-weight:700;color:${accent};margin:0 0 14px;letter-spacing:.02em">${esc(profile.name)}</p>
-        <p style="font-size:13px;color:#666;margin:0;line-height:1.7">${esc(profile.desc || '')}</p>
+        <p style="font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:#444;margin:0 0 12px">Your Recommended Plan</p>
+        <p style="font-size:30px;font-weight:700;color:${accent};margin:0 0 14px;letter-spacing:.02em">${esc(plan.name)}</p>
+        <p style="font-size:13px;color:#666;margin:0;line-height:1.7">${esc(plan.reason || '')}</p>
       </td></tr>
     </table>
   </td></tr>
 
-  <!-- Stats -->
-  <tr><td style="padding:0 0 24px">
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="width:32%;padding:16px 12px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
-          <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">Score</p>
-          <p style="font-size:17px;font-weight:700;color:${accent};margin:0">${profile.score} / 200</p>
-        </td>
-        <td style="width:2%"></td>
-        <td style="width:32%;padding:16px 12px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
-          <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">Target Rate</p>
-          <p style="font-size:17px;font-weight:700;color:${accent};margin:0">${esc(profile.rate)}</p>
-        </td>
-        <td style="width:2%"></td>
-        <td style="width:32%;padding:16px 12px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
-          <p style="font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:#555;margin:0 0 8px">Strategy</p>
-          <p style="font-size:11px;font-weight:400;color:#ccc;margin:0;line-height:1.4">${esc(profile.strategy)}</p>
-        </td>
-      </tr>
-    </table>
-  </td></tr>
-
-  <!-- Allocation -->
+  <!-- Plan detail -->
   <tr><td style="padding:24px 0;border-top:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a">
-    <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#3a3a3a;margin:0 0 20px">Suggested Strategy Allocation</p>
-    ${allocBars.map(b => `
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
+    <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#3a3a3a;margin:0 0 20px">Plan Terms</p>
+    ${detailRows.map(r => `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px">
       <tr>
-        <td style="font-size:11px;color:#999;padding-bottom:6px;width:70%">${b.label} <span style="color:#444;font-size:10px">(${b.rate})</span></td>
-        <td style="font-size:11px;color:${accent};text-align:right;padding-bottom:6px;width:30%">${b.val}%</td>
+        <td style="font-size:11px;color:#999;padding-bottom:6px;width:60%">${esc(r.label)}</td>
+        <td style="font-size:12px;color:${accent};text-align:right;padding-bottom:6px;width:40%;font-weight:600">${esc(r.value)}</td>
       </tr>
-      <tr><td colspan="2" style="padding:0">
-        <table width="100%" cellpadding="0" cellspacing="0"><tr>
-          ${b.val > 0 ? `<td style="width:${b.val}%;height:4px;background:${b.color};border-radius:2px"></td>` : ''}
-          ${b.val < 100 ? `<td style="height:4px;background:#1a1a1a;border-radius:2px"></td>` : ''}
-        </tr></table>
-      </td></tr>
     </table>`).join('')}
+    <p style="font-size:10px;color:#555;margin:14px 0 0;line-height:1.6">⚠ Early withdrawal before the completed term forfeits 25% of the returns accrued to date.</p>
   </td></tr>
 
   <!-- CTA -->
   <tr><td style="padding:32px 0;text-align:center">
-    <p style="font-size:13px;color:#666;margin:0 0 20px;line-height:1.8">Your profile is the first step toward institutional-grade returns.</p>
+    <p style="font-size:13px;color:#666;margin:0 0 20px;line-height:1.8">Your plan is the first step toward institutional-grade returns.</p>
     <table cellpadding="0" cellspacing="0" style="margin:0 auto"><tr>
       <td style="padding-right:10px">
         <a href="${SITE}/contact" style="display:inline-block;background:#004C45;color:#fff;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 28px;border-radius:2px">Contact Us</a>
       </td>
       <td>
-        <a href="${SITE}/simulator?f=${alloc.foundation || 0}&g=${alloc.growth || 0}&a=${alloc.alpha || 0}" style="display:inline-block;border:1px solid #2a2a2a;color:#777;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 28px;border-radius:2px">Run Simulation</a>
+        <a href="${SITE}/simulator?plan=${esc(plan.id)}" style="display:inline-block;border:1px solid #2a2a2a;color:#777;text-decoration:none;font-size:10px;letter-spacing:.2em;text-transform:uppercase;padding:14px 28px;border-radius:2px">Run Simulation</a>
       </td>
     </tr></table>
     <p style="font-size:11px;color:#666;margin:18px 0 0">Or email us at <a href="mailto:${CONTACT_EMAIL}" style="color:${accent};text-decoration:none">${CONTACT_EMAIL}</a></p>
@@ -201,7 +166,7 @@ function buildEmail({ firstName, profile }) {
   <tr><td style="padding:20px 0;border-top:1px solid #111;text-align:center">
     <p style="font-size:9px;color:#2a2a2a;line-height:1.9;margin:0">
       ARKA Global Investments &nbsp;·&nbsp; This profile is for informational purposes only and does not constitute financial advice.<br>
-      Strategy assignment is subject to eligibility review and applicable legal procedures.
+      Plan assignment is subject to eligibility review and applicable legal procedures.
     </p>
   </td></tr>
 
@@ -242,7 +207,7 @@ function wrapText(text, font, size, maxWidth) {
   return lines
 }
 
-async function buildPDF({ firstName, profile }) {
+async function buildPDF({ firstName, plan }) {
   const pdfDoc = await PDFDocument.create()
   const fonts  = await loadFonts(pdfDoc)
   const { bold, reg, light } = fonts
@@ -284,7 +249,7 @@ async function buildPDF({ firstName, profile }) {
     page.drawText('ARKA', { x: M + 7, y: pageH - 52, size: 13, font: bold, color: WHITE, characterSpacing: 3 })
     page.drawText('GLOBAL INVESTMENTS', { x: M + 74, y: pageH - 48, size: 6, font: reg, color: GRAY, characterSpacing: 2 })
   }
-  const docTitle = 'INVESTOR RISK PROFILE'
+  const docTitle = 'RECOMMENDED INVESTMENT PLAN'
   const dtW = reg.widthOfTextAtSize(docTitle, 7.5)
   page.drawText(docTitle, { x: pageW - M - dtW, y: pageH - 45, size: 7.5, font: reg, color: GRAY, characterSpacing: 1.5 })
 
@@ -293,26 +258,26 @@ async function buildPDF({ firstName, profile }) {
   // Greeting
   page.drawText(`Hello, ${firstName}.`, { x: M, y, size: 22, font: light, color: WHITE })
   y -= 22
-  page.drawText('Based on your responses, we have identified your investor profile.', { x: M, y, size: 9.5, font: reg, color: GRAY })
+  page.drawText('Based on your responses, we have identified your recommended fixed-term plan.', { x: M, y, size: 9.5, font: reg, color: GRAY })
   y -= 14
   page.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: GOLD })
   y -= 26
 
-  // Profile label
-  page.drawText('YOUR INVESTOR PROFILE', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  // Plan label
+  page.drawText('YOUR RECOMMENDED PLAN', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
   y -= 22
 
-  // Profile name in large text with gold accent bar
+  // Plan name in large text with gold accent bar
   page.drawRectangle({ x: M, y: y - 50, width: W, height: 60, color: CARD })
   page.drawRectangle({ x: M, y: y - 50, width: 4, height: 60, color: GOLD })
-  const nameStr = String(profile.name || '')
+  const nameStr = String(plan.name || '')
   // Scale font size down if name is long
   const nameSz = nameStr.length > 20 ? 20 : nameStr.length > 15 ? 24 : 28
   page.drawText(nameStr, { x: M + 18, y: y - 26, size: nameSz, font: bold, color: GOLD })
   y -= 50 + 14
 
-  // Description (word-wrapped)
-  const descLines = wrapText(String(profile.desc || ''), reg, 10, W)
+  // Reason (word-wrapped)
+  const descLines = wrapText(String(plan.reason || ''), reg, 10, W)
   for (const ln of descLines) {
     page.drawText(ln, { x: M, y, size: 10, font: reg, color: LGRAY })
     y -= 16
@@ -323,9 +288,9 @@ async function buildPDF({ firstName, profile }) {
   const statW = (W - 24) / 3
   const statH = 66
   const stats = [
-    { label: 'PROFILE SCORE',  value: `${profile.score} / 200`, isGold: true },
-    { label: 'REFERENCE RATE', value: String(profile.rate),      isGold: true },
-    { label: 'STRATEGY',       value: String(profile.strategy),  isGold: false },
+    { label: 'FIXED ANNUAL RATE', value: String(plan.rate),          isGold: true },
+    { label: 'TERM',              value: String(plan.term),          isGold: false },
+    { label: 'MAXIMUM RISK',      value: `-${String(plan.maxLoss)}`, isGold: false },
   ]
   stats.forEach(({ label, value, isGold }, i) => {
     const sx = M + i * (statW + 12)
@@ -346,32 +311,25 @@ async function buildPDF({ firstName, profile }) {
   })
   y -= statH + 24
 
-  // Allocation
-  page.drawText('SUGGESTED STRATEGY ALLOCATION', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  // Plan terms
+  page.drawText('PLAN TERMS', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
   y -= 18
 
-  const alloc = profile.alloc || {}
-  const allocRows = [
-    { label: 'Foundation', rate: '18%', pct: alloc.foundation || 0, color: GOLD },
-    { label: 'Strategic Growth', rate: '24%', pct: alloc.growth || 0, color: rgb(0.627, 0.502, 0.251) },
-    { label: 'Alpha Force', rate: '36%', pct: alloc.alpha || 0, color: rgb(0.478, 0.376, 0.188) },
+  const termRows = [
+    { label: 'Minimum Investment', value: String(plan.minInvestment || '') },
+    { label: 'Profile Score',      value: `${plan.score} / 12` },
   ]
-
-  for (const { label, rate, pct, color } of allocRows) {
-    page.drawText(`${label} (${rate})`, { x: M, y, size: 9.5, font: reg, color: LGRAY })
-    const pctStr = `${pct}%`
-    const pctW = bold.widthOfTextAtSize(pctStr, 9.5)
-    page.drawText(pctStr, { x: M + W - pctW, y, size: 9.5, font: bold, color: GOLD })
-    y -= 15
-    page.drawRectangle({ x: M, y: y - 4, width: W, height: 5, color: DARK })
-    if (pct > 0) page.drawRectangle({ x: M, y: y - 4, width: W * (pct / 100), height: 5, color })
-    y -= 24
+  for (const { label, value } of termRows) {
+    page.drawText(label, { x: M, y, size: 9.5, font: reg, color: LGRAY })
+    const vW = bold.widthOfTextAtSize(value, 9.5)
+    page.drawText(value, { x: M + W - vW, y, size: 9.5, font: bold, color: GOLD })
+    y -= 20
   }
 
   y -= 10
 
   // Disclaimer
-  const disc = 'This profiling is indicative only and does not constitute financial advice. Strategy assignment is subject to eligibility review, KYC/AML, and applicable legal documents. ARKA Global Investments — for qualified investors only.'
+  const disc = 'This profiling is indicative only and does not constitute financial advice. Plan assignment is subject to eligibility review, KYC/AML, and applicable legal documents. Early withdrawal before the completed term forfeits 25% of the returns accrued to date. ARKA Global Investments — for qualified investors only.'
   const discLines = wrapText(disc, reg, 7.5, W)
   page.drawLine({ start: { x: M, y: y + 4 }, end: { x: M + W, y: y + 4 }, thickness: 0.3, color: DARK })
   y -= 12
@@ -383,7 +341,7 @@ async function buildPDF({ firstName, profile }) {
   // Footer
   const footY = 34
   page.drawLine({ start: { x: M, y: footY + 18 }, end: { x: M + W, y: footY + 18 }, thickness: 0.3, color: DARK })
-  const ft = 'ARKA Global Investments  ·  Investor Profile Report  ·  For informational purposes only.'
+  const ft = 'ARKA Global Investments  ·  Recommended Plan Report  ·  For informational purposes only.'
   const ftW = reg.widthOfTextAtSize(ft, 7)
   page.drawText(ft, { x: (pageW - ftW) / 2, y: footY, size: 7, font: reg, color: DGRAY })
 

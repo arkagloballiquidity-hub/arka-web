@@ -28,14 +28,14 @@ export default function Strategies() {
   // ── Unified hero ──────────────────────────────────────────────────────────
   const hero = isEs
     ? {
-        eyebrow: 'Estrategias y Marco de Riesgo',
-        h1: 'Tres mandatos, una arquitectura de riesgo.',
-        desc: 'Cada estrategia de ARKA opera dentro de un único marco de riesgo definido. A continuación: los tres mandatos de inversión, seguidos de la arquitectura de riesgo que gobierna cada uno de ellos.',
+        eyebrow: 'Planes de Inversión y Marco de Riesgo',
+        h1: 'Tres planes a plazo fijo, una arquitectura de riesgo.',
+        desc: 'Cada plan de ARKA opera con una tasa anual fija, un plazo definido y un tope máximo de riesgo. A continuación: los tres planes de inversión, seguidos de la arquitectura de riesgo que gobierna cada uno de ellos.',
       }
     : {
-        eyebrow: 'Strategies & Risk Framework',
-        h1: 'Three mandates, one risk architecture.',
-        desc: 'Every ARKA strategy operates within a single, defined risk framework. Below: the three investment mandates, followed by the risk architecture that governs each of them.',
+        eyebrow: 'Investment Plans & Risk Framework',
+        h1: 'Three fixed-term plans, one risk architecture.',
+        desc: 'Every ARKA plan operates with a fixed annual rate, a defined term, and a maximum risk cap. Below: the three investment plans, followed by the risk architecture that governs each of them.',
       }
 
   // ── Risk section labels ───────────────────────────────────────────────────

@@ -3,228 +3,117 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLang } from '@/context/LanguageContext'
 
-// ── Questions ────────────────────────────────────────────────────────────────
+// ── Questions — horizon, liquidity need, and commitment tolerance ───────────
+// Each option scores 0 (short-term lean) to 2 (long-term lean). Max score: 12.
 const QUESTIONS = [
   {
     id: 1,
-    en: { q: 'What is your investment horizon?', opts: [
-      { label: 'Less than 1 year',   pts: 0  },
-      { label: '1 to 3 years',       pts: 5  },
-      { label: '3 to 5 years',       pts: 10 },
-      { label: '5 to 10 years',      pts: 16 },
-      { label: 'More than 10 years', pts: 20 },
+    en: { q: 'For how long can you keep this capital invested without needing it?', opts: [
+      { label: '6 months',        pts: 0 },
+      { label: '1 year',          pts: 1 },
+      { label: '2 years or more', pts: 2 },
     ]},
-    es: { q: '¿Cuál es tu horizonte de inversión?', opts: [
-      { label: 'Menos de 1 año',  pts: 0  },
-      { label: '1 a 3 años',      pts: 5  },
-      { label: '3 a 5 años',      pts: 10 },
-      { label: '5 a 10 años',     pts: 16 },
-      { label: 'Más de 10 años',  pts: 20 },
+    es: { q: '¿Por cuánto tiempo puedes mantener este capital invertido sin necesitarlo?', opts: [
+      { label: '6 meses',           pts: 0 },
+      { label: '1 año',             pts: 1 },
+      { label: '2 años o más',      pts: 2 },
     ]},
   },
   {
     id: 2,
-    en: { q: 'What is your primary investment objective?', opts: [
-      { label: 'Preserve my capital at all costs',       pts: 4  },
-      { label: 'Stable, consistent returns',             pts: 10 },
-      { label: 'Grow my wealth over the medium term',    pts: 15 },
-      { label: 'Maximize returns — accept higher risk',  pts: 20 },
+    en: { q: 'How important is early access to this capital in case of an emergency?', opts: [
+      { label: 'Very important — I might need it soon',      pts: 0 },
+      { label: 'Somewhat important — I prefer some flexibility', pts: 1 },
+      { label: 'Not relevant — I will not touch this capital', pts: 2 },
     ]},
-    es: { q: '¿Cuál es tu objetivo principal de inversión?', opts: [
-      { label: 'Preservar mi capital a toda costa',          pts: 4  },
-      { label: 'Rendimientos estables y consistentes',       pts: 10 },
-      { label: 'Crecer mi patrimonio a mediano plazo',       pts: 15 },
-      { label: 'Maximizar rendimientos — acepto mayor riesgo', pts: 20 },
+    es: { q: '¿Qué tan importante es tener acceso anticipado a este capital ante un imprevisto?', opts: [
+      { label: 'Muy importante — podría necesitarlo pronto', pts: 0 },
+      { label: 'Algo importante — prefiero cierta flexibilidad', pts: 1 },
+      { label: 'No es relevante — no pienso tocar este capital', pts: 2 },
     ]},
   },
   {
     id: 3,
-    en: { q: 'What temporary portfolio loss could you tolerate?', opts: [
-      { label: 'None — I need full capital security', pts: 0  },
-      { label: 'Up to –5%',                          pts: 6  },
-      { label: 'Up to –10%',                         pts: 12 },
-      { label: 'Up to –20%',                         pts: 17 },
-      { label: 'More than –20%',                     pts: 20 },
+    en: { q: 'If you needed to withdraw before completing the term, how comfortable are you forfeiting 25% of the accrued return as a penalty?', opts: [
+      { label: 'Not comfortable — I prefer shorter terms',    pts: 0 },
+      { label: 'I would accept it if necessary',              pts: 1 },
+      { label: 'Not a concern — I do not plan to withdraw early', pts: 2 },
     ]},
-    es: { q: '¿Qué nivel de pérdida temporal tolerarías en tu portafolio?', opts: [
-      { label: 'Ninguno — necesito seguridad total', pts: 0  },
-      { label: 'Hasta –5%',                         pts: 6  },
-      { label: 'Hasta –10%',                        pts: 12 },
-      { label: 'Hasta –20%',                        pts: 17 },
-      { label: 'Más del –20%',                      pts: 20 },
+    es: { q: 'Si necesitaras retirar antes de completar el plazo, ¿qué tan cómodo estás con perder el 25% del rendimiento acumulado como penalización?', opts: [
+      { label: 'Nada cómodo — prefiero plazos cortos',        pts: 0 },
+      { label: 'Lo aceptaría si fuera necesario',              pts: 1 },
+      { label: 'No me preocupa — no pienso retirar antes de tiempo', pts: 2 },
     ]},
   },
   {
     id: 4,
-    en: { q: 'What is your investment experience level?', opts: [
-      { label: 'No experience',                            pts: 4  },
-      { label: 'Basic — savings accounts, funds',          pts: 8  },
-      { label: 'Intermediate — equities, bonds',           pts: 13 },
-      { label: 'Advanced — derivatives, FX, alternatives', pts: 18 },
-      { label: 'Professional — institutional management',  pts: 20 },
+    en: { q: 'What is your main objective with this capital?', opts: [
+      { label: 'Short-term liquidity with a fixed return',        pts: 0 },
+      { label: 'Balanced growth over a medium-term horizon',      pts: 1 },
+      { label: 'Maximize the fixed rate with a long-term commitment', pts: 2 },
     ]},
-    es: { q: '¿Cuál es tu nivel de experiencia en inversiones?', opts: [
-      { label: 'Sin experiencia',                         pts: 4  },
-      { label: 'Básico — cuentas de ahorro, fondos',      pts: 8  },
-      { label: 'Intermedio — acciones, bonos',            pts: 13 },
-      { label: 'Avanzado — derivados, FX, alternativos',  pts: 18 },
-      { label: 'Profesional — gestión institucional',     pts: 20 },
+    es: { q: '¿Cuál es tu objetivo principal con este capital?', opts: [
+      { label: 'Liquidez a corto plazo con un rendimiento fijo',        pts: 0 },
+      { label: 'Crecimiento balanceado a mediano plazo',                pts: 1 },
+      { label: 'Maximizar la tasa fija con un compromiso de largo plazo', pts: 2 },
     ]},
   },
   {
     id: 5,
-    en: { q: 'If your portfolio drops 15% in one month, what do you do?', opts: [
-      { label: 'Withdraw all capital immediately',    pts: 0  },
-      { label: 'Withdraw part of my capital',         pts: 6  },
-      { label: 'Hold — wait for recovery',            pts: 13 },
-      { label: 'Take the opportunity to invest more', pts: 20 },
+    en: { q: 'What amount do you have available to invest?', opts: [
+      { label: '$500,000 – $1,000,000 MXN',  pts: 0 },
+      { label: '$1,000,000 – $3,000,000 MXN', pts: 1 },
+      { label: '$3,000,000+ MXN',            pts: 2 },
     ]},
-    es: { q: 'Si tu portafolio cae 15% en un mes, ¿qué haces?', opts: [
-      { label: 'Retiro todo mi capital inmediatamente', pts: 0  },
-      { label: 'Retiro parte de mi capital',            pts: 6  },
-      { label: 'Espero sin hacer cambios',              pts: 13 },
-      { label: 'Aprovecho para invertir más',           pts: 20 },
+    es: { q: '¿Qué monto tienes disponible para invertir?', opts: [
+      { label: '$500,000 – $1,000,000 MXN',  pts: 0 },
+      { label: '$1,000,000 – $3,000,000 MXN', pts: 1 },
+      { label: '$3,000,000+ MXN',            pts: 2 },
     ]},
   },
   {
     id: 6,
-    en: { q: 'When might you need access to your invested capital?', opts: [
-      { label: 'Within 1 year',      pts: 0  },
-      { label: '1 to 3 years',       pts: 8  },
-      { label: '3 to 5 years',       pts: 14 },
-      { label: 'More than 5 years',  pts: 20 },
+    en: { q: 'Have you previously invested in fixed-term products (CETES, promissory notes, term deposits)?', opts: [
+      { label: 'No, this would be my first time', pts: 0 },
+      { label: 'Yes, occasionally',                pts: 1 },
+      { label: 'Yes, regularly',                   pts: 2 },
     ]},
-    es: { q: '¿Cuándo podrías necesitar acceso a tu capital invertido?', opts: [
-      { label: 'En menos de 1 año', pts: 0  },
-      { label: '1 a 3 años',        pts: 8  },
-      { label: '3 a 5 años',        pts: 14 },
-      { label: 'Más de 5 años',     pts: 20 },
-    ]},
-  },
-  {
-    id: 7,
-    en: { q: 'Which best describes your financial situation?', opts: [
-      { label: 'This investment represents most of my savings', pts: 4  },
-      { label: 'Surplus capital, not needed short-term',        pts: 11 },
-      { label: 'Long-term capital, I have an emergency fund',   pts: 17 },
-      { label: 'Institutional / diversified portfolio',         pts: 20 },
-    ]},
-    es: { q: '¿Cuál describe mejor tu situación financiera?', opts: [
-      { label: 'Esta inversión representa la mayoría de mis ahorros', pts: 4  },
-      { label: 'Capital excedente, no necesario a corto plazo',       pts: 11 },
-      { label: 'Capital de largo plazo, tengo fondo de emergencia',   pts: 17 },
-      { label: 'Portafolio institucional / diversificado',            pts: 20 },
-    ]},
-  },
-  {
-    id: 8,
-    en: { q: 'What is your available capital range?', opts: [
-      { label: '$5,000 – $25,000 USD',    pts: 5  },
-      { label: '$25,000 – $100,000 USD',  pts: 10 },
-      { label: '$100,000 – $500,000 USD', pts: 15 },
-      { label: '$500,000+ USD',           pts: 20 },
-    ]},
-    es: { q: '¿Cuál es tu rango de capital disponible para invertir?', opts: [
-      { label: '$5,000 – $25,000 USD',    pts: 5  },
-      { label: '$25,000 – $100,000 USD',  pts: 10 },
-      { label: '$100,000 – $500,000 USD', pts: 15 },
-      { label: '$500,000+ USD',           pts: 20 },
-    ]},
-  },
-  {
-    id: 9,
-    en: { q: 'How often do you plan to make additional contributions?', opts: [
-      { label: 'I do not plan to contribute further',      pts: 4  },
-      { label: 'Occasionally',                            pts: 9  },
-      { label: 'Monthly — fixed contributions',           pts: 15 },
-      { label: 'Actively, based on market opportunities', pts: 20 },
-    ]},
-    es: { q: '¿Con qué frecuencia harías aportaciones adicionales?', opts: [
-      { label: 'No planeo hacer aportaciones',         pts: 4  },
-      { label: 'Ocasionalmente',                       pts: 9  },
-      { label: 'Mensualmente — aportaciones fijas',   pts: 15 },
-      { label: 'Activamente, según oportunidades',    pts: 20 },
-    ]},
-  },
-  {
-    id: 10,
-    en: { q: 'Which risk/return balance best matches your expectations?', opts: [
-      { label: 'Very conservative — low returns, maximum security', pts: 4  },
-      { label: 'Conservative-moderate — stable returns, low risk',  pts: 10 },
-      { label: 'Moderate — balance between growth and stability',   pts: 16 },
-      { label: 'Dynamic — accept volatility for higher returns',    pts: 20 },
-    ]},
-    es: { q: '¿Qué equilibrio riesgo/rendimiento describe mejor tu expectativa?', opts: [
-      { label: 'Muy conservador — retornos bajos, máxima seguridad',    pts: 4  },
-      { label: 'Conservador-moderado — rendimientos estables',          pts: 10 },
-      { label: 'Moderado — balance entre crecimiento y estabilidad',    pts: 16 },
-      { label: 'Dinámico — acepto volatilidad por mayores rendimientos', pts: 20 },
+    es: { q: '¿Has invertido antes en productos de plazo fijo (CETES, pagarés, depósitos a término)?', opts: [
+      { label: 'No, sería mi primera vez',   pts: 0 },
+      { label: 'Sí, ocasionalmente',          pts: 1 },
+      { label: 'Sí, regularmente',            pts: 2 },
     ]},
   },
 ]
+const TOTAL_QUESTIONS = QUESTIONS.length
+const MAX_SCORE = TOTAL_QUESTIONS * 2
 
-// ── Institutional profile palette ─────────────────────────────────────────────
-// All profiles use white/silver tones — gold accent for the key highlight
-function getProfile(score) {
-  if (score <= 65) return {
-    id: 'conservative',
-    color: '#5E97C2',
-    en: { name: 'Conservative', desc: 'Capital preservation is your priority. You prefer predictable, stable growth with minimal volatility. ARKA Foundation Strategy aligns best with your profile.' },
-    es: { name: 'Conservador',  desc: 'La preservación de capital es tu prioridad. Prefieres crecimiento predecible y estable con mínima volatilidad. La Estrategia Fundación ARKA se alinea mejor con tu perfil.' },
-    strategy: 'ARKA Foundation Strategy', rate: '18%',
-    alloc: { foundation: 80, growth: 20, alpha: 0 },
-    gradient: 'from-white/80 to-white/50',
-    barColors: { foundation: 'rgba(255,255,255,0.7)', growth: '#C9A352', alpha: 'rgba(255,255,255,0.25)' },
-  }
-  if (score <= 115) return {
-    id: 'moderate',
-    color: '#46B58F',
-    en: { name: 'Moderate', desc: 'You seek balanced growth with managed risk. You can tolerate moderate volatility in exchange for consistent capital appreciation. A blend of Foundation and Strategic Growth suits you.' },
-    es: { name: 'Moderado',  desc: 'Buscas crecimiento equilibrado con riesgo gestionado. Puedes tolerar volatilidad moderada a cambio de apreciación de capital consistente. Una combinación de Fundación y Crecimiento Estratégico te conviene.' },
-    strategy: 'Foundation + Strategic Growth', rate: '21%',
-    alloc: { foundation: 50, growth: 50, alpha: 0 },
-    gradient: 'from-[#C9A352] to-[#E8C87A]',
-    barColors: { foundation: 'rgba(255,255,255,0.55)', growth: '#C9A352', alpha: 'rgba(255,255,255,0.2)' },
-  }
-  if (score <= 155) return {
-    id: 'balanced',
-    color: '#C9A352',
-    en: { name: 'Balanced Growth', desc: 'You combine discipline with ambition. You are comfortable with measured volatility and seek meaningful capital growth over time. A diversified multi-strategy allocation suits your profile.' },
-    es: { name: 'Crecimiento Equilibrado', desc: 'Combinas disciplina con ambición. Te sientes cómodo con volatilidad medida y buscas crecimiento de capital significativo. Una asignación multi-estrategia diversificada se adapta a tu perfil.' },
-    strategy: 'Multi-Strategy Blend', rate: '26%',
-    alloc: { foundation: 30, growth: 45, alpha: 25 },
-    gradient: 'from-white to-[#C9A352]',
-    barColors: { foundation: 'rgba(255,255,255,0.5)', growth: '#C9A352', alpha: 'rgba(255,255,255,0.3)' },
-  }
-  if (score <= 178) return {
-    id: 'dynamic',
-    color: '#E0705A',
-    en: { name: 'Dynamic', desc: 'You pursue superior risk-adjusted returns and are comfortable with active market exposure. ARKA Alpha Force and a growth-tilted allocation align with your high-performance profile.' },
-    es: { name: 'Dinámico',  desc: 'Buscas retornos superiores ajustados al riesgo y te sientes cómodo con exposición activa al mercado. ARKA Alpha Force y una asignación orientada al crecimiento se alinean con tu perfil.' },
-    strategy: 'ARKA Alpha Force + Growth', rate: '32%',
-    alloc: { foundation: 10, growth: 35, alpha: 55 },
-    gradient: 'from-[#C9A352] via-white to-white',
-    barColors: { foundation: 'rgba(255,255,255,0.35)', growth: '#C9A352', alpha: 'rgba(255,255,255,0.65)' },
-  }
-  return {
-    id: 'aggressive',
-    color: '#9B6FD4',
-    en: { name: 'Aggressive', desc: 'You pursue maximum return and full market exposure, accepting the highest volatility for the greatest growth potential. A full allocation to ARKA Alpha Force aligns with your maximum-risk profile.' },
-    es: { name: 'Agresivo',  desc: 'Buscas el máximo rendimiento y exposición total al mercado, aceptando la mayor volatilidad a cambio del mayor potencial de crecimiento. Una asignación completa a ARKA Alpha Force se alinea con tu perfil de riesgo máximo.' },
-    strategy: 'ARKA Alpha Force', rate: '36%',
-    alloc: { foundation: 0, growth: 0, alpha: 100 },
-    gradient: 'from-[#C9A352] to-white',
-    barColors: { foundation: 'rgba(255,255,255,0.25)', growth: 'rgba(255,255,255,0.4)', alpha: '#C9A352' },
-  }
-}
+// ── Recommended plans — mirrors Simulator.jsx canonical plan data ───────────
+const PLANS = [
+  {
+    id: 'flex20', name: 'Flex 20', color: '#5E97C2',
+    rate: 0.20, maxLoss: 0.05, termDays: 183, minInvestment: '$28,571 USD (≈ $500,000 MXN)',
+    en: { term: '6-month term', reason: 'Your priority is flexibility and shorter-term liquidity — Flex 20 gives you a fixed institutional return without a long lock-up.' },
+    es: { term: 'Plazo de 6 meses', reason: 'Tu prioridad es la flexibilidad y la liquidez a corto plazo — Flex 20 te da un rendimiento fijo institucional sin un compromiso prolongado.' },
+  },
+  {
+    id: 'fijo22', name: 'Fijo 22/1', color: '#C9A352',
+    rate: 0.22, maxLoss: 0.075, termDays: 366, minInvestment: '$28,571 USD (≈ $500,000 MXN)',
+    en: { term: '12-month term', reason: 'You are comfortable with a one-year commitment in exchange for a higher fixed annual rate — Fijo 22/1 is a balanced fit.' },
+    es: { term: 'Plazo de 12 meses', reason: 'Te sientes cómodo con un compromiso de un año a cambio de una tasa anual fija más alta — Fijo 22/1 es un equilibrio adecuado.' },
+  },
+  {
+    id: 'fijo25', name: 'Fijo 25/2', color: '#9B6FD4',
+    rate: 0.25, maxLoss: 0.10, termDays: 731, minInvestment: '$28,571 USD (≈ $500,000 MXN)',
+    en: { term: '24-month term', reason: 'You prioritize maximizing the fixed reference rate and are comfortable locking capital for the long term — Fijo 25/2 offers ARKA’s highest fixed annual rate.' },
+    es: { term: 'Plazo de 24 meses', reason: 'Buscas maximizar la tasa de referencia fija y te sientes cómodo inmovilizando capital a largo plazo — Fijo 25/2 ofrece la tasa anual fija más alta de ARKA.' },
+  },
+]
 
-// ── Gradient text ─────────────────────────────────────────────────────────────
-function GradientText({ children, gradient, className = '' }) {
-  return (
-    <span className={`bg-gradient-to-r ${gradient} bg-clip-text text-transparent ${className}`}>
-      {children}
-    </span>
-  )
+function getRecommendation(score) {
+  if (score <= 4) return PLANS[0]
+  if (score <= 8) return PLANS[1]
+  return PLANS[2]
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -242,9 +131,10 @@ export default function Profiler() {
   const [sendStatus,  setSendStatus]  = useState('idle') // idle | sending | sent | error
 
   const totalScore = Object.values(answers).reduce((s, v) => s + v, 0)
-  const profile    = getProfile(totalScore)
+  const plan        = getRecommendation(totalScore)
+  const pData       = plan[lang] || plan.en
 
-  const current = step >= 1 && step <= 10 ? QUESTIONS[step - 1] : null
+  const current = step >= 1 && step <= TOTAL_QUESTIONS ? QUESTIONS[step - 1] : null
   const qData   = current ? current[lang] || current.en : null
 
   const go = (nextStep, direction = 1) => {
@@ -258,21 +148,14 @@ export default function Profiler() {
     setAnswers(prev => ({ ...prev, [current.id]: pts }))
     setSelected(pts)
     setTimeout(() => {
-      if (step < 10) go(step + 1, 1)
-      else go(11, 1)
+      if (step < TOTAL_QUESTIONS) go(step + 1, 1)
+      else go(TOTAL_QUESTIONS + 1, 1)
     }, 380)
   }
 
   const runSimulator = () => {
-    try {
-      sessionStorage.setItem('arka_profiler_alloc', JSON.stringify({
-        f:  profile.alloc.foundation,
-        g:  profile.alloc.growth,
-        a:  profile.alloc.alpha,
-        id: profile.id,
-      }))
-    } catch {}
-    navigate('/simulator')
+    try { sessionStorage.setItem('arka_profiler_plan', plan.id) } catch {}
+    navigate(`/simulator?plan=${plan.id}`)
   }
 
   const restart = () => {
@@ -288,7 +171,6 @@ export default function Profiler() {
   const handleSendProfile = async () => {
     if (!senderEmail || sendStatus === 'sending' || sendStatus === 'sent') return
     setSendStatus('sending')
-    const pData = profile[lang] || profile.en
     try {
       const res = await fetch('/api/send-profiler', {
         method: 'POST',
@@ -296,13 +178,15 @@ export default function Profiler() {
         body: JSON.stringify({
           name:  senderName,
           email: senderEmail,
-          profile: {
-            name:     pData.name,
-            desc:     pData.desc,
-            strategy: profile.strategy,
-            rate:     profile.rate,
-            score:    totalScore,
-            alloc:    profile.alloc,
+          plan: {
+            id:            plan.id,
+            name:          plan.name,
+            term:          pData.term,
+            rate:          `${(plan.rate * 100).toFixed(0)}%`,
+            maxLoss:       `${(plan.maxLoss * 100).toFixed(1)}%`,
+            minInvestment: plan.minInvestment,
+            reason:        pData.reason,
+            score:         totalScore,
           },
         }),
       })
@@ -316,47 +200,46 @@ export default function Profiler() {
   const T = {
     en: {
       intro_title: 'Investor Profiler',
-      intro_sub:   'Answer 10 questions to discover which ARKA strategy aligns with your investor profile.',
+      intro_sub:   `Answer ${TOTAL_QUESTIONS} questions to discover which ARKA fixed-term plan matches your horizon and liquidity needs.`,
       start:       'Begin Assessment',
       question:    'Question',
       of:          'of',
       back:        '← Back',
-      result_title: 'Your Investor Profile',
+      result_title: 'Your Recommended Plan',
       score:       'Profile Score',
-      recommended: 'Recommended Strategy',
-      ref_rate:    'Reference Rate',
-      allocation:  'Suggested Allocation',
-      foundation:  'Foundation',
-      growth:      'Strategic Growth',
-      alpha:       'Alpha Force',
+      recommended: 'Recommended Plan',
+      ref_rate:    'Fixed Annual Rate',
+      term_label:  'Term',
+      minInvestment: 'Minimum Investment',
+      maxRisk:     'Maximum Risk',
+      why:         'Why this plan',
       simulate:    'Run Simulation →',
       apply:       'Contact',
       restart:     'Retake Assessment',
-      disclaimer:  '⚠ This profiling is indicative only. Strategy assignment is subject to eligibility review, KYC/AML procedures, and execution of applicable legal documents.',
+      disclaimer:  '⚠ This profiling is indicative only. Plan assignment is subject to eligibility review, KYC/AML procedures, and execution of applicable legal documents. Early withdrawal before the term ends forfeits 25% of the returns accrued to date.',
     },
     es: {
       intro_title: 'Perfilador de Inversor',
-      intro_sub:   'Responde 10 preguntas para descubrir qué estrategia ARKA se alinea con tu perfil de inversor.',
+      intro_sub:   `Responde ${TOTAL_QUESTIONS} preguntas para descubrir qué plan a plazo fijo de ARKA se alinea con tu horizonte y necesidades de liquidez.`,
       start:       'Iniciar Evaluación',
       question:    'Pregunta',
       of:          'de',
       back:        '← Atrás',
-      result_title: 'Tu Perfil de Inversor',
+      result_title: 'Tu Plan Recomendado',
       score:       'Puntuación de Perfil',
-      recommended: 'Estrategia Recomendada',
-      ref_rate:    'Tasa de Referencia',
-      allocation:  'Asignación Sugerida',
-      foundation:  'Fundación',
-      growth:      'Crecimiento Estratégico',
-      alpha:       'Alpha Force',
+      recommended: 'Plan Recomendado',
+      ref_rate:    'Tasa Anual Fija',
+      term_label:  'Plazo',
+      minInvestment: 'Inversión Mínima',
+      maxRisk:     'Riesgo Máximo',
+      why:         'Por qué este plan',
       simulate:    'Ver Simulación →',
       apply:       'Contacto',
       restart:     'Repetir Evaluación',
-      disclaimer:  '⚠ Este perfilamiento es indicativo. La asignación de estrategia está sujeta a revisión de elegibilidad, KYC/AML y ejecución de los documentos legales aplicables.',
+      disclaimer:  '⚠ Este perfilamiento es indicativo. La asignación de plan está sujeta a revisión de elegibilidad, KYC/AML y ejecución de los documentos legales aplicables. El retiro anticipado antes de finalizar el plazo penaliza con el 25% de los rendimientos acumulados a la fecha.',
     },
   }
   const tx = T[lang] || T.en
-  const pData = profile[lang] || profile.en
 
   return (
     <main className="pt-20 min-h-screen bg-[#050505]">
@@ -390,9 +273,9 @@ export default function Profiler() {
                   </p>
                   <div className="flex justify-center gap-10 pt-4">
                     {[
-                      { n: '10', label: lang === 'es' ? 'Preguntas' : 'Questions' },
-                      { n: '~3', label: lang === 'es' ? 'Minutos'   : 'Minutes'   },
-                      { n: '4',  label: lang === 'es' ? 'Perfiles'  : 'Profiles'  },
+                      { n: String(TOTAL_QUESTIONS), label: lang === 'es' ? 'Preguntas' : 'Questions' },
+                      { n: '~2', label: lang === 'es' ? 'Minutos'   : 'Minutes'   },
+                      { n: '3',  label: lang === 'es' ? 'Planes'    : 'Plans'  },
                     ].map(({ n, label }) => (
                       <div key={n} className="text-center">
                         <p className="text-4xl font-extralight bg-gradient-to-b from-white to-white/55 bg-clip-text text-transparent">
@@ -411,7 +294,7 @@ export default function Profiler() {
             )}
 
             {/* ── Question ── */}
-            {step >= 1 && step <= 10 && qData && (
+            {step >= 1 && step <= TOTAL_QUESTIONS && qData && (
               <motion.div key={`q-${step}`}
                 custom={dir}
                 initial={{ opacity: 0, x: dir * 40 }}
@@ -424,17 +307,17 @@ export default function Profiler() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] tracking-[0.3em] uppercase text-white/45">
-                      {tx.question} {step} {tx.of} 10
+                      {tx.question} {step} {tx.of} {TOTAL_QUESTIONS}
                     </span>
                     <span className="text-[10px] text-white/35 tabular-nums font-mono">
-                      {Math.round(step / 10 * 100)}%
+                      {Math.round(step / TOTAL_QUESTIONS * 100)}%
                     </span>
                   </div>
                   <div className="h-px bg-white/8 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full bg-gradient-to-r from-[#C9A352] to-[#E8C87A] rounded-full"
                       initial={false}
-                      animate={{ width: `${(step / 10) * 100}%` }}
+                      animate={{ width: `${(step / TOTAL_QUESTIONS) * 100}%` }}
                       transition={{ duration: 0.4 }}
                     />
                   </div>
@@ -479,26 +362,26 @@ export default function Profiler() {
             )}
 
             {/* ── Results ── */}
-            {step === 11 && (
+            {step === TOTAL_QUESTIONS + 1 && (
               <motion.div key="results"
                 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.5 }}
                 className="space-y-10">
 
-                {/* Profile badge */}
+                {/* Plan badge */}
                 <div className="relative text-center py-8 border-b border-white/[0.07] overflow-hidden">
                   <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full"
-                    style={{ backgroundColor: profile.color, filter: 'blur(90px)', opacity: 0.18 }} />
+                    style={{ backgroundColor: plan.color, filter: 'blur(90px)', opacity: 0.18 }} />
                   <div className="relative space-y-5">
                     <p className="inline-flex items-center gap-2.5 text-[10px] tracking-[0.45em] uppercase text-white/45">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: profile.color }} />
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: plan.color }} />
                       {tx.result_title}
                     </p>
-                    <h2 className="text-[clamp(2.2rem,6vw,4rem)] font-light tracking-tight" style={{ color: profile.color }}>
-                      {pData.name}
+                    <h2 className="text-[clamp(2.2rem,6vw,4rem)] font-light tracking-tight" style={{ color: plan.color }}>
+                      {plan.name}
                     </h2>
                     <p className="text-white/72 text-base md:text-lg leading-relaxed max-w-lg mx-auto">
-                      {pData.desc}
+                      {pData.reason}
                     </p>
                   </div>
                 </div>
@@ -506,15 +389,15 @@ export default function Profiler() {
                 {/* Stats grid */}
                 <div className="grid grid-cols-3 gap-4">
                   {[
-                    { label: tx.score,       value: `${totalScore} / 200`, isGold: true  },
-                    { label: tx.ref_rate,    value: profile.rate,          isGold: true  },
-                    { label: tx.recommended, value: profile.strategy,      isGold: false },
+                    { label: tx.ref_rate,    value: `${(plan.rate * 100).toFixed(0)}%`,     isGold: true },
+                    { label: tx.term_label,  value: pData.term,                              isGold: false },
+                    { label: tx.maxRisk,     value: `−${(plan.maxLoss * 100).toFixed(1)}%`,  isGold: false },
                   ].map(({ label, value, isGold }) => (
                     <div key={label} className="p-4 md:p-5 rounded-xl border border-white/8 bg-white/[0.03] space-y-2 text-center">
                       <p className="text-[9px] tracking-[0.25em] uppercase text-white/45">{label}</p>
                       <p className="font-light text-sm md:text-base leading-tight">
                         {isGold
-                          ? <span style={{ color: profile.color }}>{value}</span>
+                          ? <span style={{ color: plan.color }}>{value}</span>
                           : <span className="text-white/85">{value}</span>
                         }
                       </p>
@@ -522,44 +405,31 @@ export default function Profiler() {
                   ))}
                 </div>
 
-                {/* Suggested allocation */}
-                <div className="p-6 rounded-xl border border-white/8 bg-white/[0.03] space-y-5">
-                  <p className="text-[10px] tracking-[0.28em] uppercase text-white/50">{tx.allocation}</p>
-                  {[
-                    { label: tx.foundation, key: 'foundation', val: profile.alloc.foundation, rate: '18%' },
-                    { label: tx.growth,     key: 'growth',     val: profile.alloc.growth,     rate: '24%' },
-                    { label: tx.alpha,      key: 'alpha',      val: profile.alloc.alpha,       rate: '36%' },
-                  ].map(({ label, key, val, rate }) => (
-                    <div key={key} className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-white/80 text-sm tracking-wide">
-                          {label}
-                          <span className="text-white/35 ml-2 text-xs">({rate})</span>
-                        </span>
-                        <span className="text-white/65 tabular-nums font-medium text-sm">{val}%</span>
-                      </div>
-                      <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                        <motion.div className="h-full rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${val}%` }}
-                          transition={{ duration: 0.7, delay: 0.2 }}
-                          style={{ backgroundColor: profile.color, opacity: key === 'foundation' ? 0.55 : key === 'growth' ? 0.78 : 1 }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                {/* Plan detail */}
+                <div className="p-6 rounded-xl border border-white/8 bg-white/[0.03] space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] tracking-[0.28em] uppercase text-white/50">{tx.minInvestment}</span>
+                    <span className="text-white/85 text-sm">{plan.minInvestment}</span>
+                  </div>
+                  <div className="h-px bg-white/[0.06]" />
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] tracking-[0.25em] uppercase text-white/50">{tx.why}</p>
+                    <p className="text-white/70 text-sm leading-relaxed">
+                      {tx.score}: <span className="tabular-nums" style={{ color: plan.color }}>{totalScore} / {MAX_SCORE}</span>
+                    </p>
+                  </div>
                 </div>
 
                 {/* ── Send profile by email ── */}
                 <div className="rounded-xl border border-white/8 bg-white/[0.03] p-5 space-y-4">
                   <div>
                     <p className="text-[10px] tracking-[0.28em] uppercase text-white/55 mb-1">
-                      {lang === 'es' ? 'Recibir perfil por correo' : 'Receive your profile by email'}
+                      {lang === 'es' ? 'Recibir plan por correo' : 'Receive your plan by email'}
                     </p>
                     <p className="text-[10px] text-white/30">
                       {lang === 'es'
-                        ? 'Te enviamos tu perfil de inversor y asignación sugerida.'
-                        : 'We\'ll send your investor profile and suggested allocation.'}
+                        ? 'Te enviamos tu plan recomendado y sus condiciones.'
+                        : 'We\'ll send your recommended plan and its terms.'}
                     </p>
                   </div>
                   <div className="grid sm:grid-cols-2 gap-3">
@@ -596,9 +466,9 @@ export default function Profiler() {
                       }`}
                   >
                     {sendStatus === 'sending' && (lang === 'es' ? 'Enviando...' : 'Sending...')}
-                    {sendStatus === 'sent'    && (lang === 'es' ? '✓ Perfil enviado' : '✓ Profile sent')}
+                    {sendStatus === 'sent'    && (lang === 'es' ? '✓ Plan enviado' : '✓ Plan sent')}
                     {sendStatus === 'error'   && (lang === 'es' ? 'Error — intentar de nuevo' : 'Error — try again')}
-                    {sendStatus === 'idle'    && (lang === 'es' ? 'Enviar mi perfil →' : 'Send my profile →')}
+                    {sendStatus === 'idle'    && (lang === 'es' ? 'Enviar mi plan →' : 'Send my plan →')}
                   </button>
                 </div>
 

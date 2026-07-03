@@ -33,9 +33,9 @@ const SEO_MAP = {
       'Learn about ARKA Global Investments — built over a decade of quantitative research, systematic execution, and institutional structuring for private capital stewardship.',
   },
   '/strategies': {
-    title: 'Investment Strategies | ARKA Global Investments',
+    title: 'Investment Plans | ARKA Global Investments',
     description:
-      'Explore ARKA Foundation Strategy, ARKA Strategic Growth, and ARKA Alpha Force — three private investment mandates with defined risk architecture and disciplined systematic execution.',
+      'Explore Flex 20, Fijo 22/1, and Fijo 25/2 — three fixed-term investment plans with fixed annual rates from 20% to 25%, defined risk caps, and disciplined systematic execution.',
   },
   '/risk': {
     title: 'Risk Framework | ARKA Global Investments',
@@ -70,12 +70,12 @@ const SEO_MAP = {
   '/simulator': {
     title: 'Investment Simulator | ARKA Global Investments',
     description:
-      'Project your capital growth across ARKA investment strategies. Interactive simulator with compound interest calculations and benchmark comparisons.',
+      'Compare Flex 20, Fijo 22/1, and Fijo 25/2 and project your capital at maturity with ARKA’s fixed-term investment plans. Interactive calculator with benchmark comparisons.',
   },
   '/profiler': {
     title: 'Investor Profiler | ARKA Global Investments',
     description:
-      'Discover which ARKA investment strategy matches your risk profile. Complete the 10-question investor assessment.',
+      'Discover which ARKA fixed-term plan matches your investment horizon and liquidity needs. Complete the short investor assessment.',
   },
   '/contract-intake': {
     title: 'ARKA Global Liquidity',

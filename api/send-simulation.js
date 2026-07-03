@@ -8,16 +8,10 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const SITE   = 'https://www.arkaglobalinvestments.com'
 const CONTACT_EMAIL = 'contacto@arkaltd.io'
 
-// Risk-tier accent colors (shared with the site + profiler email)
-const RISK_COLORS = ['#5E97C2', '#46B58F', '#C9A352', '#E0705A', '#9B6FD4']
-function riskColor(f, g, a) {
-  const rate = (f * 0.18 + g * 0.24 + a * 0.36) / 100 * 100
-  if (rate <= 20)   return RISK_COLORS[0]
-  if (rate <= 23)   return RISK_COLORS[1]
-  if (rate <= 27.5) return RISK_COLORS[2]
-  if (rate <= 33)   return RISK_COLORS[3]
-  return RISK_COLORS[4]
-}
+// Plan accent colors (shared with the site + profiler email)
+const PLAN_COLORS = { flex20: '#5E97C2', fijo22: '#C9A352', fijo25: '#9B6FD4' }
+function planColor(id) { return PLAN_COLORS[id] || '#C9A352' }
+const TERM_MONTHS = { flex20: 6, fijo22: 12, fijo25: 24 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 let montserratBoldBytes, montserratRegBytes, montserratLightBytes, logoPngBytes
@@ -50,37 +44,31 @@ async function sendTelegram(text) {
 }
 
 // ── Projection engine (mirrors frontend) ─────────────────────────────────────
-const RATES = { foundation: 0.18, growth: 0.24, alpha: 0.36 }
-const BENCH = { sp500: 0.10, cetes: 0.105, bank: 0.045 }
+// ARKA fixed-term plans pay simple interest, prorated by day count over the
+// term — not compounded. Benchmarks are shown compounded daily for comparison.
+const BENCH = { sp500: 0.108, cetes: 0.097, bank: 0.045 }
 
-function calcProjection({ initial, monthly, years, f, g, a, compound }) {
-  const annual = (f * RATES.foundation + g * RATES.growth + a * RATES.alpha) / 100
-  const daily  = Math.pow(1 + annual, 1 / 365) - 1
-  const mRate  = compound ? Math.pow(1 + daily, 365 / 12) - 1 : annual / 12
-  const mSP    = compound ? Math.pow(1 + BENCH.sp500,  1/12) - 1 : BENCH.sp500  / 12
-  const mCetes = compound ? Math.pow(1 + BENCH.cetes,  1/12) - 1 : BENCH.cetes  / 12
-  const mBank  = compound ? Math.pow(1 + BENCH.bank,   1/12) - 1 : BENCH.bank   / 12
+function arkaValueAtDay(principal, rate, days) {
+  return principal * (1 + (rate * days) / 365)
+}
+function benchValueAtDay(principal, annualRate, days) {
+  const daily = Math.pow(1 + annualRate, 1 / 365) - 1
+  return principal * Math.pow(1 + daily, days)
+}
 
-  let arka = initial, sp500 = initial, cetes = initial, bank = initial
-  let totalContrib = initial
-  const rows = [{ year: 0, arka: initial, sp500: initial, cetes: initial, bank: initial, contributed: initial }]
-
-  for (let y = 1; y <= years; y++) {
-    for (let m = 0; m < 12; m++) {
-      if (compound) {
-        arka  = arka  * (1 + mRate)  + monthly
-        sp500 = sp500 * (1 + mSP)   + monthly
-        cetes = cetes * (1 + mCetes) + monthly
-        bank  = bank  * (1 + mBank)  + monthly
-      } else {
-        arka  += initial * mRate   + monthly
-        sp500 += initial * mSP    + monthly
-        cetes += initial * mCetes + monthly
-        bank  += initial * mBank  + monthly
-      }
-      totalContrib += monthly
-    }
-    rows.push({ year: y, arka: Math.round(arka), sp500: Math.round(sp500), cetes: Math.round(cetes), bank: Math.round(bank), contributed: Math.round(totalContrib) })
+function calcSeries(amount, rate, termDays, termMonths) {
+  const steps = termMonths || 12
+  const rows = []
+  for (let i = 0; i <= steps; i++) {
+    const day = Math.round((i / steps) * termDays)
+    rows.push({
+      month: i,
+      day,
+      arka:  Math.round(arkaValueAtDay(amount, rate, day)),
+      sp500: Math.round(benchValueAtDay(amount, BENCH.sp500, day)),
+      cetes: Math.round(benchValueAtDay(amount, BENCH.cetes, day)),
+      bank:  Math.round(benchValueAtDay(amount, BENCH.bank, day)),
+    })
   }
   return rows
 }
@@ -93,8 +81,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST')   return res.status(405).end()
 
-  const { name, email, params, results } = req.body || {}
-  if (!email || !params || !results)
+  const { name, email, plan, amount, results } = req.body || {}
+  if (!email || !plan || !amount || !results)
     return res.status(400).json({ error: 'Missing required fields' })
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email)))
     return res.status(400).json({ error: 'Invalid email' })
@@ -102,21 +90,17 @@ export default async function handler(req, res) {
   const safeName  = String(name || 'Investor').replace(/[<>&"']/g, '')
   const firstName = safeName.split(' ')[0]
 
-  const rows = calcProjection({
-    initial:  params.initial,
-    monthly:  params.monthly,
-    years:    params.years,
-    f: params.f, g: params.g, a: params.a,
-    compound: params.compound,
-  })
+  const rateDecimal = Number(plan.rate) / 100
+  const termMonths  = TERM_MONTHS[plan.id] || 12
+  const rows = calcSeries(amount, rateDecimal, plan.termDays, termMonths)
 
-  const pdfBuffer = await buildPDF({ firstName, params, results, rows })
+  const pdfBuffer = await buildPDF({ firstName, plan, amount, results, rows })
 
   const { error: mailErr } = await resend.emails.send({
     from:    process.env.RESEND_FROM || 'ARKA Global Investments <noreply@arkaglobalinvestments.com>',
     to:      email,
-    subject: 'ARKA — Your Investment Simulation Results',
-    html:    buildEmail({ firstName, params, results, rows }),
+    subject: `ARKA — Your ${plan.name} Simulation Results`,
+    html:    buildEmail({ firstName, plan, amount, results, rows }),
     attachments: [{ filename: 'ARKA-Simulation-Report.pdf', content: Buffer.from(pdfBuffer).toString('base64') }],
   })
 
@@ -128,31 +112,26 @@ export default async function handler(req, res) {
   await sendTelegram(
     `📊 <b>Nueva Simulación — ARKA</b>\n\n` +
     `👤 ${esc(name || '(sin nombre)')}\n📧 ${esc(email)}\n\n` +
-    `💰 Capital inicial: <b>${fmtUSD(params.initial)}</b>\n` +
-    `📈 Capital proyectado: <b>${fmtUSD(results.finalCapital)}</b>\n` +
-    `💹 Ganancia neta: <b>${fmtUSD(results.netGain)}</b> (×${results.multiplier})\n` +
-    `🗓 Horizonte: <b>${params.years} años</b>\n` +
-    `📊 Tasa ponderada: <b>${params.annual}%</b>\n` +
-    `🔀 Mix: Foundation ${params.f}% · Growth ${params.g}% · Alpha ${params.a}%`
+    `📋 Plan: <b>${esc(plan.name)}</b> (${plan.rate}% anual, ${plan.termDays} días)\n` +
+    `💰 Monto: <b>${fmtUSD(amount)}</b>\n` +
+    `📈 Capital al vencimiento: <b>${fmtUSD(results.maturityValue)}</b>\n` +
+    `💹 Rendimiento fijo: <b>${fmtUSD(results.maturityGain)}</b> (×${results.multiplier})`
   )
 
   return res.status(200).json({ sent: true })
 }
 
 // ── Email template ────────────────────────────────────────────────────────────
-function buildEmail({ firstName, params, results, rows }) {
-  const accent = riskColor(params.f, params.g, params.a)
+function buildEmail({ firstName, plan, amount, results, rows }) {
+  const accent = planColor(plan.id)
   const paramRows = [
-    ['Initial Capital',      fmtUSD(params.initial)],
-    ['Monthly Contribution', fmtUSD(params.monthly)],
-    ['Investment Horizon',   `${params.years} years`],
-    ['Blended Annual Rate',  `${params.annual}%`],
-    ['Strategy Mix',         `Foundation ${params.f}% · Growth ${params.g}% · Alpha ${params.a}%`],
-    ['Compounding',          params.compound ? 'Compound Interest' : 'Simple Interest'],
+    ['Plan',                 `${plan.name} (${plan.termDays} days)`],
+    ['Investment Amount',    fmtUSD(amount)],
+    ['Fixed Annual Rate',    `${plan.rate}%`],
+    ['Paid at Day',          String(plan.termDays)],
   ]
 
-  const step = params.years <= 10 ? 1 : params.years <= 20 ? 2 : 5
-  const tableRows = rows.filter((r, i) => i > 0 && (r.year % step === 0 || r.year === params.years))
+  const tableRows = rows.filter((r, i) => i > 0)
   const final = rows[rows.length - 1]
 
   return `<!DOCTYPE html>
@@ -184,7 +163,7 @@ function buildEmail({ firstName, params, results, rows }) {
     <p style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#444;margin:0 0 16px">Investment Simulation Report</p>
     <h1 style="font-size:22px;font-weight:300;margin:0 0 12px;color:#fff">Hello, ${esc(firstName)}.</h1>
     <p style="font-size:14px;color:#888;line-height:1.8;margin:0">
-      Here are the results of your personalized simulation using <strong style="color:#ccc">ARKA Global Investments</strong> strategies.
+      Here are the results of your personalized simulation using ARKA’s <strong style="color:#ccc">${esc(plan.name)}</strong> fixed-term plan.
     </p>
   </td></tr>
 
@@ -192,9 +171,9 @@ function buildEmail({ firstName, params, results, rows }) {
   <tr><td style="padding:0 0 12px">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td style="padding:28px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;text-align:center">
-        <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#555;margin:0 0 10px">Projected Capital</p>
-        <p style="font-size:36px;font-weight:700;color:${accent};margin:0;letter-spacing:-.5px">${fmtUSD(results.finalCapital)}</p>
-        <p style="font-size:10px;color:#555;margin:8px 0 0">after ${params.years} year${params.years !== 1 ? 's' : ''}</p>
+        <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#555;margin:0 0 10px">Capital at Maturity</p>
+        <p style="font-size:36px;font-weight:700;color:${accent};margin:0;letter-spacing:-.5px">${fmtUSD(results.maturityValue)}</p>
+        <p style="font-size:10px;color:#555;margin:8px 0 0">paid at day ${plan.termDays}</p>
       </td></tr>
     </table>
   </td></tr>
@@ -204,13 +183,13 @@ function buildEmail({ firstName, params, results, rows }) {
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td style="width:49%;padding:18px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
-          <p style="font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:#555;margin:0 0 8px">Total Contributed</p>
-          <p style="font-size:18px;font-weight:300;color:#ccc;margin:0">${fmtUSD(results.totalContrib)}</p>
+          <p style="font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:#555;margin:0 0 8px">Principal</p>
+          <p style="font-size:18px;font-weight:300;color:#ccc;margin:0">${fmtUSD(amount)}</p>
         </td>
         <td style="width:2%"></td>
         <td style="width:49%;padding:18px;background:#0d0d0d;border:1px solid #1e1e1e;border-radius:10px;text-align:center">
-          <p style="font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:#555;margin:0 0 8px">Net Gain</p>
-          <p style="font-size:18px;font-weight:300;color:#ccc;margin:0">${fmtUSD(results.netGain)} <span style="font-size:12px;color:${accent}">×${results.multiplier}</span></p>
+          <p style="font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:#555;margin:0 0 8px">Fixed Return</p>
+          <p style="font-size:18px;font-weight:300;color:#ccc;margin:0">${fmtUSD(results.maturityGain)} <span style="font-size:12px;color:${accent}">×${results.multiplier}</span></p>
         </td>
       </tr>
     </table>
@@ -218,7 +197,7 @@ function buildEmail({ firstName, params, results, rows }) {
 
   <!-- Parameters -->
   <tr><td style="padding:24px 0;border-top:1px solid #1a1a1a">
-    <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#3a3a3a;margin:0 0 16px">Simulation Parameters</p>
+    <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#3a3a3a;margin:0 0 16px">Plan Parameters</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${paramRows.map(([k, v], i) => `<tr style="background:${i % 2 === 0 ? '#0d0d0d' : 'transparent'}">
         <td style="padding:9px 12px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#555">${k}</td>
@@ -275,21 +254,21 @@ function buildEmail({ firstName, params, results, rows }) {
     }).join('')}
   </td></tr>
 
-  <!-- Year-by-year table -->
+  <!-- Growth timeline table -->
   <tr><td style="padding:28px 0;border-top:1px solid #1a1a1a">
-    <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#3a3a3a;margin:0 0 16px">Year-by-Year Growth</p>
+    <p style="font-size:9px;letter-spacing:.35em;text-transform:uppercase;color:#3a3a3a;margin:0 0 16px">Capital Growth Over the Term</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
       <tr style="background:#111">
-        ${['Year','ARKA','S&amp;P 500','CETES','Contributed'].map(h =>
+        ${['Day','ARKA','S&amp;P 500','CETES','Banking'].map(h =>
           `<td style="padding:8px 10px;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#555">${h}</td>`
         ).join('')}
       </tr>
       ${tableRows.map((r, i) => `<tr style="background:${i % 2 === 0 ? '#0d0d0d' : 'transparent'}">
-        <td style="padding:8px 10px;font-size:10px;color:#666;font-family:monospace">Yr ${r.year}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#666;font-family:monospace">${r.day}</td>
         <td style="padding:8px 10px;font-size:10px;color:${accent};font-weight:600">${fmtUSD(r.arka)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#777">${fmtUSD(r.sp500)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#666">${fmtUSD(r.cetes)}</td>
-        <td style="padding:8px 10px;font-size:10px;color:#555">${fmtUSD(r.contributed)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#555">${fmtUSD(r.bank)}</td>
       </tr>`).join('')}
     </table>
   </td></tr>
@@ -306,8 +285,8 @@ function buildEmail({ firstName, params, results, rows }) {
   <!-- Footer -->
   <tr><td style="padding:20px 0;border-top:1px solid #111;text-align:center">
     <p style="font-size:9px;color:#2a2a2a;line-height:1.9;margin:0">
-      ARKA Global Investments &nbsp;·&nbsp; This simulation uses target reference rates and does not guarantee future results.<br>
-      Investing involves risk, including possible loss of capital.
+      ARKA Global Investments &nbsp;·&nbsp; Fixed annual rates are contractual references and do not guarantee performance.<br>
+      Early withdrawal before the term ends forfeits 25% of the returns accrued to date. Investing involves risk, including possible loss of capital.
     </p>
   </td></tr>
 
@@ -373,7 +352,7 @@ async function drawHeader(page, pdfDoc, fonts, width, height, M, GOLD, GRAY, ROW
   page.drawText(title, { x: width - M - tw, y: height - 45, size: 7.5, font: fonts.reg, color: GRAY, characterSpacing: 1.5 })
 }
 
-async function buildPDF({ firstName, params, results, rows }) {
+async function buildPDF({ firstName, plan, amount, results, rows }) {
   const pdfDoc = await PDFDocument.create()
   const fonts  = await loadFonts(pdfDoc)
   const { bold, reg, light } = fonts
@@ -403,7 +382,7 @@ async function buildPDF({ firstName, params, results, rows }) {
   // Greeting
   page1.drawText(`Hello, ${firstName}.`, { x: M, y, size: 22, font: light, color: WHITE })
   y -= 22
-  page1.drawText('Here are the results of your personalized investment simulation.', { x: M, y, size: 9.5, font: reg, color: GRAY })
+  page1.drawText(`Here are the results of your ${plan.name} plan simulation.`, { x: M, y, size: 9.5, font: reg, color: GRAY })
   y -= 14
   page1.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: GOLD })
   y -= 24
@@ -412,17 +391,17 @@ async function buildPDF({ firstName, params, results, rows }) {
   const kpiBlockH = 76
   page1.drawRectangle({ x: M, y: y - kpiBlockH, width: W, height: kpiBlockH, color: CARD })
   page1.drawRectangle({ x: M, y: y - kpiBlockH, width: 3, height: kpiBlockH, color: GOLD })
-  page1.drawText('PROJECTED CAPITAL', { x: M + 16, y: y - 18, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
-  page1.drawText(fmtUSD(results.finalCapital), { x: M + 16, y: y - 46, size: 28, font: bold, color: GOLD })
-  page1.drawText(`after ${params.years} year${params.years !== 1 ? 's' : ''}`, { x: M + 16, y: y - 66, size: 9, font: reg, color: GRAY })
+  page1.drawText('CAPITAL AT MATURITY', { x: M + 16, y: y - 18, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  page1.drawText(fmtUSD(results.maturityValue), { x: M + 16, y: y - 46, size: 28, font: bold, color: GOLD })
+  page1.drawText(`paid at day ${plan.termDays}`, { x: M + 16, y: y - 66, size: 9, font: reg, color: GRAY })
   y -= kpiBlockH + 14
 
   // Secondary KPIs
   const kpiW = (W - 12) / 2
   const kpiH = 52
   const kpis = [
-    { label: 'TOTAL CONTRIBUTED', value: fmtUSD(results.totalContrib) },
-    { label: 'NET GAIN',          value: `${fmtUSD(results.netGain)}   ×${results.multiplier}` },
+    { label: 'PRINCIPAL',    value: fmtUSD(amount) },
+    { label: 'FIXED RETURN', value: `${fmtUSD(results.maturityGain)}   ×${results.multiplier}` },
   ]
   kpis.forEach(({ label, value }, i) => {
     const kx = M + i * (kpiW + 12)
@@ -434,15 +413,13 @@ async function buildPDF({ firstName, params, results, rows }) {
   y -= kpiH + 22
 
   // Parameters
-  page1.drawText('SIMULATION PARAMETERS', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  page1.drawText('PLAN PARAMETERS', { x: M, y, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
   y -= 14
   const paramRows = [
-    ['Initial Capital',      fmtUSD(params.initial)],
-    ['Monthly Contribution', fmtUSD(params.monthly)],
-    ['Investment Horizon',   `${params.years} years`],
-    ['Blended Annual Rate',  `${params.annual}%`],
-    ['Strategy Mix',         `Foundation ${params.f}%  /  Growth ${params.g}%  /  Alpha ${params.a}%`],
-    ['Compounding Mode',     params.compound ? 'Compound Interest' : 'Simple Interest'],
+    ['Plan',              `${plan.name} (${plan.termDays} days)`],
+    ['Investment Amount', fmtUSD(amount)],
+    ['Fixed Annual Rate', `${plan.rate}%`],
+    ['Paid at Day',       String(plan.termDays)],
   ]
   paramRows.forEach(([label, value], i) => {
     const rh = 24
@@ -479,10 +456,10 @@ async function buildPDF({ firstName, params, results, rows }) {
   })
   y -= 8
 
-  // ── Page 2 — Market Context + Year-by-Year ─────────────────────────────────
+  // ── Page 2 — Market Context + Growth Timeline ───────────────────────────────
   const page2 = pdfDoc.addPage([pageW, pageH])
   page2.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: BG })
-  await drawHeader(page2, pdfDoc, fonts, pageW, pageH, M, GOLD, GRAY, ROW, 'YEAR-BY-YEAR GROWTH')
+  await drawHeader(page2, pdfDoc, fonts, pageW, pageH, M, GOLD, GRAY, ROW, 'CAPITAL GROWTH OVER THE TERM')
 
   let y2 = pageH - 92
 
@@ -520,17 +497,17 @@ async function buildPDF({ firstName, params, results, rows }) {
   page2.drawLine({ start: { x: M, y: y2 }, end: { x: M + W, y: y2 }, thickness: 0.4, color: DARK })
   y2 -= 18
 
-  // Year-by-year table
-  page2.drawText('YEAR-BY-YEAR GROWTH', { x: M, y: y2, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
+  // Growth timeline table
+  page2.drawText('CAPITAL GROWTH OVER THE TERM', { x: M, y: y2, size: 7.5, font: bold, color: GRAY, characterSpacing: 2 })
   y2 -= 14
 
-  await drawTable(page2, rows, params, M, y2, W, bold, reg, GOLD, GRAY, LGRAY, ROW, DARK, BG)
+  await drawTable(page2, rows, M, y2, W, bold, reg, GOLD, GRAY, LGRAY, ROW, DARK, BG)
 
   // Footer — both pages
   for (const pg of [page1, page2]) {
     const footY = 34
     pg.drawLine({ start: { x: M, y: footY + 18 }, end: { x: M + W, y: footY + 18 }, thickness: 0.3, color: DARK })
-    const ft = 'ARKA Global Investments  ·  Target reference rates only — does not guarantee results. Investing involves risk.'
+    const ft = 'ARKA Global Investments  ·  Fixed annual rates are contractual references — early withdrawal forfeits 25% of accrued returns.'
     const ftW = reg.widthOfTextAtSize(ft, 7)
     pg.drawText(ft, { x: (pageW - ftW) / 2, y: footY, size: 7, font: reg, color: DGRAY })
   }
@@ -538,17 +515,16 @@ async function buildPDF({ firstName, params, results, rows }) {
   return pdfDoc.save()
 }
 
-async function drawTable(page, rows, params, M, startY, W, bold, reg, GOLD, GRAY, LGRAY, ROW, DARK) {
+async function drawTable(page, rows, M, startY, W, bold, reg, GOLD, GRAY, LGRAY, ROW, DARK) {
   let y = startY
-  const step = params.years <= 10 ? 1 : params.years <= 20 ? 2 : 5
-  const tableRows = rows.filter((r, i) => i > 0 && (r.year % step === 0 || r.year === params.years))
+  const tableRows = rows.filter((r, i) => i > 0)
 
   const cols = [
-    { label: 'YEAR',        w: 0.08 },
-    { label: 'ARKA',        w: 0.25 },
-    { label: 'S&P 500',     w: 0.25 },
-    { label: 'CETES',       w: 0.22 },
-    { label: 'CONTRIBUTED', w: 0.20 },
+    { label: 'DAY',      w: 0.12 },
+    { label: 'ARKA',     w: 0.25 },
+    { label: 'S&P 500',  w: 0.23 },
+    { label: 'CETES',    w: 0.20 },
+    { label: 'BANKING',  w: 0.20 },
   ]
 
   // Header
@@ -563,7 +539,7 @@ async function drawTable(page, rows, params, M, startY, W, bold, reg, GOLD, GRAY
   tableRows.forEach((r, i) => {
     const rh = 18
     if (i % 2 === 0) page.drawRectangle({ x: M, y: y - rh, width: W, height: rh, color: ROW })
-    const cells = [`Yr ${r.year}`, fmtUSD(r.arka), fmtUSD(r.sp500), fmtUSD(r.cetes), fmtUSD(r.contributed)]
+    const cells = [String(r.day), fmtUSD(r.arka), fmtUSD(r.sp500), fmtUSD(r.cetes), fmtUSD(r.bank)]
     cx = M + 8
     cells.forEach((cell, ci) => {
       const color = ci === 1 ? GOLD : ci === 0 ? GRAY : LGRAY
