@@ -2,10 +2,12 @@
 // for MXN-denominated plan amounts. USDT tracks USD ~1:1, so this doubles
 // as a USD/MXN spot reference. Cached at the edge for 24h — Bitso is only
 // hit once per day per Vercel's CDN, not on every request.
+import { applyCors } from './_cors.js'
+
 const FALLBACK_RATE = 17.5
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  applyCors(req, res)
   res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=3600')
 
   try {

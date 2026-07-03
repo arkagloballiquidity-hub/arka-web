@@ -109,6 +109,12 @@ const USD_MINIMUM = 28571.42
 
 const MAX_BENEFICIARIES = 4
 
+// Only the B2Core portal is allowed to frame this page (enforced by CSP
+// frame-ancestors in vercel.json). We additionally verify event.origin on
+// every postMessage as defence-in-depth, so a rogue frame can never inject a
+// forged SSO email or locale even if the CSP were ever relaxed.
+const ALLOWED_PARENT_ORIGINS = ['https://my.arkaltd.io']
+
 const ACCENT = '#004C45'
 const ACCENT_HOVER = '#005c54'
 
@@ -523,6 +529,8 @@ export default function ContractIntake() {
   useEffect(() => {
     if (!framed) return
     function handleMessage(event) {
+      // Reject messages from any frame that isn't the trusted B2Core portal.
+      if (!ALLOWED_PARENT_ORIGINS.includes(event.origin)) return
       const data = event.data
       if (!data || typeof data !== 'object') return
 

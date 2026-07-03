@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { applyCors, bodyTooLarge } from './_cors.js'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const NOTIFY_EMAIL = process.env.CONTRACTS_NOTIFY_EMAIL || 'contacto@arkaltd.io'
@@ -39,10 +40,10 @@ function section(title, rowsHtml) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  applyCors(req, res)
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).end()
+  if (bodyTooLarge(req)) return res.status(413).json({ error: 'Payload too large' })
 
   const { mandante, beneficiaries } = req.body || {}
   if (!mandante || !mandante.email || !mandante.fullName)
@@ -51,6 +52,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid email' })
   if (!Array.isArray(beneficiaries) || beneficiaries.length === 0)
     return res.status(400).json({ error: 'Missing beneficiaries' })
+  if (beneficiaries.length > 4)
+    return res.status(400).json({ error: 'Too many beneficiaries' })
 
   const m = mandante
   const idType = m.idType === 'Otro' ? m.idTypeOther : m.idType

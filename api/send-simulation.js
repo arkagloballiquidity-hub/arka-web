@@ -3,6 +3,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { applyCors, bodyTooLarge } from './_cors.js'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const SITE   = 'https://www.arkaglobalinvestments.com'
@@ -75,11 +76,10 @@ function calcSeries(amount, rate, termDays, termMonths) {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin',  '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  applyCors(req, res)
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST')   return res.status(405).end()
+  if (bodyTooLarge(req))       return res.status(413).json({ error: 'Payload too large' })
 
   const { name, email, plan, amount, results } = req.body || {}
   if (!email || !plan || !amount || !results)
